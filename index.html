@@ -90,26 +90,76 @@
     </section>
   </div>
   <script>
-    let role = null, socket = null, audio = null;
+    let role = null, socket = null, audio = null, clockOffset = 0, clockReady = false, scheduledStart = null;
     const senderTracks = () => [$('instrumentalAudio'), $('mainVocalAudio')];
     const $ = id => document.getElementById(id);
     const bars = id => { const el=$(id); el.innerHTML=''; for(let i=0;i<28;i++){const b=document.createElement('i'); b.className='bar'; b.style.animationDelay=(i*-.08)+'s'; el.appendChild(b);} };
     bars('senderMeter'); bars('receiverMeter');
     function enter(next){ role=next; $('landing').classList.add('hidden'); $(next==='sender'?'senderApp':'receiverApp').classList.add('active'); audio=$(next==='sender'?'instrumentalAudio':'receiverAudio'); }
-    function goHome(){ if(socket) socket.close(); document.querySelectorAll('.app').forEach(x=>x.classList.remove('active')); $('landing').classList.remove('hidden'); }
+    function goHome(){ if(socket) socket.close(); if(scheduledStart) clearTimeout(scheduledStart); clockReady=false; document.querySelectorAll('.app').forEach(x=>x.classList.remove('active')); $('landing').classList.remove('hidden'); }
     function code(){ return $(role==='sender'?'senderCode':'receiverCode').value.trim().toUpperCase() || 'MOSES1'; }
+    function localServerTime(){ return Date.now() + clockOffset; }
+    function syncClock(){
+      return new Promise(resolve => {
+        const samples = [];
+        let remaining = 5;
+        const takeSample = () => {
+          const id = Math.random().toString(36).slice(2);
+          const sentAt = Date.now();
+          const handler = event => {
+            let msg;
+            try { msg = JSON.parse(event.data); } catch { return; }
+            if(msg.type !== 'clock-sync-response' || msg.id !== id) return;
+            socket.removeEventListener('message', handler);
+            const receivedAt = Date.now();
+            samples.push({ offset: msg.serverTime - (sentAt + receivedAt) / 2, rtt: receivedAt - sentAt });
+            if(--remaining) setTimeout(takeSample, 40);
+            else {
+              samples.sort((a,b)=>a.rtt-b.rtt);
+              clockOffset = samples[0].offset;
+              clockReady = true;
+              resolve();
+            }
+          };
+          socket.addEventListener('message', handler);
+          socket.send(JSON.stringify({type:'clock-sync', id}));
+        };
+        takeSample();
+      });
+    }
     function connect(){
       if(socket) socket.close();
+      clockReady=false;
       const protocol=location.protocol==='https:'?'wss':'ws';
       socket=new WebSocket(protocol+'://'+location.host+'/?room='+encodeURIComponent(code()));
       if(role==='receiver'){
         audio.play().then(()=>{ audio.pause(); audio.currentTime=0; }).catch(()=>{});
       }
-      socket.onopen=()=>{ $('connection').textContent='connected / '+code(); $(role==='sender'?'senderState':'receiverState').textContent=role==='receiver'?'Connected + audio ready':'Connected'; };
+      socket.onopen=async()=>{ $('connection').textContent='connected / syncing clock'; $(role==='sender'?'senderState':'receiverState').textContent='Syncing clock…'; await syncClock(); $('connection').textContent='connected / '+code(); $(role==='sender'?'senderState':'receiverState').textContent=role==='receiver'?'Connected + audio ready':'Connected'; };
       socket.onclose=()=>{ $('connection').textContent='offline'; };
-      socket.onmessage=e=>{ const msg=JSON.parse(e.data); if(role==='receiver' && msg.type==='transport' && msg.action==='play'){ audio.currentTime=msg.time; audio.play().catch(()=>{}); syncMeter(true); } };
+      socket.onmessage=e=>{
+        let msg;
+        try { msg=JSON.parse(e.data); } catch { return; }
+        if(role==='receiver' && msg.type==='transport' && msg.action==='play') scheduleAudio([audio], msg.time, msg.startAt);
+      };
     }
-    function sendPlay(){ if(!socket || socket.readyState!==1) return alert('Connect to a session first.'); const tracks=senderTracks(); const time=tracks[0].currentTime; socket.send(JSON.stringify({type:'transport',action:'play',time})); tracks.forEach(track=>track.play().catch(()=>{})); syncMeter(true); }
+    function scheduleAudio(tracks, time, startAt){
+      if(scheduledStart) clearTimeout(scheduledStart);
+      const localStart = startAt - clockOffset;
+      const delay = Math.max(0, localStart - Date.now());
+      scheduledStart = setTimeout(()=>{
+        const elapsed = Math.max(0, (Date.now() - localStart) / 1000);
+        tracks.forEach(track=>{ track.currentTime=time + elapsed; track.play().catch(()=>{}); });
+        syncMeter(true);
+      }, delay);
+    }
+    function sendPlay(){
+      if(!socket || socket.readyState!==1) return alert('Connect to a session first.');
+      if(!clockReady) return alert('Still syncing the room clock. Try again in a moment.');
+      const tracks=senderTracks(), time=tracks[0].currentTime, startAt=localServerTime()+1000;
+      socket.send(JSON.stringify({type:'transport',action:'play',time,startAt}));
+      scheduleAudio(tracks, time, startAt);
+    }
     function syncMeter(on){ const id=role==='sender'?'senderMeter':'receiverMeter'; $(id).parentElement.classList.toggle('playing',on); }
     $('instrumentalAudio').src='audio/shadow-moses-instrumental.mp3'; $('mainVocalAudio').src='audio/shadow-moses-main-vocals.mp3'; $('receiverAudio').src='audio/shadow-moses-backing-vocals.mp3';
     $('instrumentalAudio').addEventListener('play',()=>syncMeter(true)); $('receiverAudio').addEventListener('play',()=>syncMeter(true));

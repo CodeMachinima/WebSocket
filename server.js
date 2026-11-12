@@ -21,7 +21,26 @@ wss.on('connection', (client, req) => {
   const room = new URL(req.url, 'http://localhost').searchParams.get('room') || 'MOSES1';
   if (!rooms.has(room)) rooms.set(room, new Set());
   rooms.get(room).add(client);
-  client.on('message', message => { for (const peer of rooms.get(room)) if (peer !== client && peer.readyState === WebSocket.OPEN) peer.send(message.toString()); });
+  client.on('message', message => {
+    let payload;
+    try { payload = JSON.parse(message.toString()); } catch { return; }
+
+    // Use the server as a shared clock so devices with different system times
+    // can still schedule audio for the same instant.
+    if (payload.type === 'clock-sync') {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({ type: 'clock-sync-response', id: payload.id, serverTime: Date.now() }));
+      }
+      return;
+    }
+
+    const outgoing = JSON.stringify(payload.type === 'transport'
+      ? { ...payload, serverTime: Date.now() }
+      : payload);
+    for (const peer of rooms.get(room)) {
+      if (peer !== client && peer.readyState === WebSocket.OPEN) peer.send(outgoing);
+    }
+  });
   client.on('close', () => { rooms.get(room)?.delete(client); if (!rooms.get(room)?.size) rooms.delete(room); });
 });
 server.listen(8080, () => console.log('Shadow Moses split signal at http://localhost:8080'));
