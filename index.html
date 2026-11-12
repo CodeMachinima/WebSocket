@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SHADOW MOSES // split signal</title>
+  <style>
+    :root { --paper:#f2eee6; --ink:#171717; --muted:#746f65; --red:#ff4d38; --line:#d3ccc0; --lime:#c9e88b; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; background:var(--paper); color:var(--ink); font-family:Arial, Helvetica, sans-serif; }
+    body:before { content:""; position:fixed; inset:0; pointer-events:none; opacity:.11; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.25'/%3E%3C/svg%3E"); }
+    .wrap { width:min(1120px, calc(100% - 40px)); margin:auto; }
+    header { display:flex; justify-content:space-between; align-items:center; padding:26px 0; border-bottom:1px solid var(--line); font-size:11px; letter-spacing:.14em; text-transform:uppercase; }
+    .brand { font-weight:800; letter-spacing:.04em; font-size:13px; }
+    .brand span { color:var(--red); }
+    .status { display:flex; align-items:center; gap:8px; color:var(--muted); }
+    .dot { width:8px; height:8px; border-radius:50%; background:var(--red); box-shadow:0 0 0 4px #ff4d3820; }
+    main { padding:clamp(48px, 9vw, 110px) 0 70px; }
+    .eyebrow { color:var(--red); font:700 12px/1 monospace; letter-spacing:.18em; text-transform:uppercase; }
+    h1 { max-width:850px; margin:18px 0 22px; font-size:clamp(54px, 10vw, 130px); line-height:.84; letter-spacing:-.08em; text-transform:uppercase; }
+    h1 em { color:var(--red); font-style:normal; }
+    .intro { max-width:600px; color:#514c45; font-size:18px; line-height:1.5; }
+    .choices { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:18px; margin-top:56px; }
+    .choice { position:relative; min-height:300px; padding:26px; border:1px solid var(--ink); background:#e8e2d8; display:flex; flex-direction:column; justify-content:space-between; transition:.2s; }
+    .choice:hover { transform:translateY(-5px); background:#fffaf1; box-shadow:8px 8px 0 var(--red); }
+    .choice.receiver { background:var(--ink); color:var(--paper); border-color:var(--ink); }
+    .choice.receiver:hover { background:#242424; box-shadow:8px 8px 0 var(--lime); }
+    .number { font:700 12px monospace; opacity:.6; }
+    .choice h2 { margin:45px 0 8px; font-size:34px; letter-spacing:-.06em; text-transform:uppercase; }
+    .choice p { margin:0; max-width:350px; line-height:1.4; color:var(--muted); }
+    .receiver p { color:#aaa69d; }
+    button { border:0; padding:14px 18px; background:var(--red); color:#fff; font-weight:800; font-size:12px; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; }
+    button:hover { filter:brightness(1.1); }
+    .choice button { align-self:flex-start; margin-top:22px; }
+    .receiver button { color:var(--ink); background:var(--lime); }
+    .app { display:none; padding-bottom:70px; }
+    .app.active { display:block; }
+    .landing.hidden { display:none; }
+    .app-head { display:flex; justify-content:space-between; align-items:flex-end; gap:20px; padding:58px 0 28px; border-bottom:1px solid var(--line); }
+    .app-head h2 { margin:10px 0 0; font-size:clamp(38px,6vw,72px); letter-spacing:-.08em; text-transform:uppercase; }
+    .session-box { display:flex; align-items:center; gap:9px; padding:10px 12px; border:1px solid var(--line); font:13px monospace; }
+    .session-box input { width:70px; border:0; background:transparent; font:700 14px monospace; text-transform:uppercase; outline:none; }
+    .grid { display:grid; grid-template-columns:1.1fr .9fr; gap:18px; margin-top:18px; }
+    .panel { border:1px solid var(--line); padding:24px; background:#e8e2d8; }
+    .panel.dark { background:var(--ink); color:var(--paper); border-color:var(--ink); }
+    .panel-title { display:flex; justify-content:space-between; margin-bottom:28px; font:700 12px monospace; letter-spacing:.1em; text-transform:uppercase; }
+    .track { display:flex; align-items:center; gap:14px; padding:14px 0; border-top:1px solid var(--line); }
+    .dark .track { border-color:#45433f; }
+    .track-icon { width:34px; height:34px; display:grid; place-items:center; background:var(--red); color:#fff; font-size:15px; }
+    .track-copy { flex:1; min-width:0; }
+    .track-copy strong { display:block; font-size:14px; text-transform:uppercase; }
+    .track-copy small { display:block; margin-top:5px; color:var(--muted); font-size:11px; }
+    .dark .track-copy small { color:#aaa69d; }
+    audio { display:none; }
+    .transport { margin-top:28px; }
+    .transport button { width:100%; padding:20px; font-size:14px; }
+    .meter { height:80px; display:flex; gap:3px; align-items:center; margin-top:24px; }
+    .bar { flex:1; background:var(--red); opacity:.7; animation:pulse 1.2s ease-in-out infinite alternate; animation-play-state:paused; }
+    .playing .bar { animation-play-state:running; }
+    @keyframes pulse { from { height:20%; } to { height:95%; } }
+    .hint { margin:25px 0 0; color:var(--muted); font-size:12px; line-height:1.5; }
+    .dark .hint { color:#aaa69d; }
+    .back { margin-top:24px; background:transparent; border:1px solid var(--line); color:var(--ink); }
+    @media(max-width:720px) { .choices,.grid { grid-template-columns:1fr; } .app-head { align-items:flex-start; flex-direction:column; } h1 { font-size:18vw; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header><div class="brand">SPLIT SIGNAL <span>/</span> 01</div><div class="status"><span class="dot"></span><span id="connection">offline until connected</span></div></header>
+    <section class="landing" id="landing">
+      <main>
+        <div class="eyebrow">Bring Me The Horizon // Shadow Moses</div>
+        <h1>Two screens.<br><em>One song.</em></h1>
+        <p class="intro">Split the track across two webpages. Choose a role, connect with the same session code, and let the WebSocket keep both sides locked to the same pulse.</p>
+        <div class="choices">
+          <article class="choice"><div><div class="number">01 / TRANSMIT</div><h2>Main sender</h2><p>Play the instrumental and Oli’s main vocal. Your transport controls lead the room.</p></div><button onclick="enter('sender')">Enter sender →</button></article>
+          <article class="choice receiver"><div><div class="number">02 / RECEIVE</div><h2>Background receiver</h2><p>Listen for “We’re going nowhere” and follow the sender in real time.</p></div><button onclick="enter('receiver')">Enter receiver →</button></article>
+        </div>
+      </main>
+    </section>
+
+    <section class="app" id="senderApp">
+      <div class="app-head"><div><div class="eyebrow">01 / transmit</div><h2>Main sender</h2></div><div class="session-box">SESSION <input id="senderCode" maxlength="6" value="MOSES1" /><button onclick="connect()">Connect</button></div></div>
+      <div class="grid"><div class="panel"><div class="panel-title"><span>Your mix</span><span>Leader</span></div><div class="track"><div class="track-icon">♫</div><div class="track-copy"><strong>Instrumental</strong><small>Stem 01 / loaded automatically</small></div></div><audio id="instrumentalAudio"></audio><div class="track"><div class="track-icon">◉</div><div class="track-copy"><strong>Oli’s main vocal</strong><small>Stem 02 / loaded automatically</small></div></div><audio id="mainVocalAudio"></audio><div class="transport"><button onclick="sendPlay()">▶ Play Shadow Moses together</button></div><p class="hint">One button starts the instrumental and main vocal here, then signals the receiver to start the backing vocal at the same timestamp.</p></div><div class="panel dark"><div class="panel-title"><span>Signal</span><span id="senderState">Not connected</span></div><div class="meter" id="senderMeter"></div><p class="hint">Share this page’s URL with the background-vocal performer. They should enter the same session code.</p><button class="back" onclick="goHome()">← Change role</button></div></div>
+    </section>
+
+    <section class="app" id="receiverApp">
+      <div class="app-head"><div><div class="eyebrow">02 / receive</div><h2>Background receiver</h2></div><div class="session-box">SESSION <input id="receiverCode" maxlength="6" value="MOSES1" /><button onclick="connect()">Connect</button></div></div>
+      <div class="grid"><div class="panel dark"><div class="panel-title"><span>Incoming mix</span><span>Follower</span></div><div class="track"><div class="track-icon">↗</div><div class="track-copy"><strong>Background vocal</strong><small>Stem 03 / loaded automatically</small></div></div><audio id="receiverAudio"></audio><div class="meter" id="receiverMeter"></div><p class="hint">Connect with the same code as the sender. Your backing vocal begins when the sender presses play.</p><button class="back" onclick="goHome()">← Change role</button></div><div class="panel"><div class="panel-title"><span>Signal</span><span id="receiverState">Waiting for sender</span></div><h3 style="font-size:42px;letter-spacing:-.07em;margin:40px 0 10px;text-transform:uppercase;">Stay<br>in time.</h3><p class="hint">Keep this tab open and use headphones if the two stems are playing in different rooms.</p></div></div>
+    </section>
+  </div>
+  <script>
+    let role = null, socket = null, audio = null;
+    const senderTracks = () => [$('instrumentalAudio'), $('mainVocalAudio')];
+    const $ = id => document.getElementById(id);
+    const bars = id => { const el=$(id); el.innerHTML=''; for(let i=0;i<28;i++){const b=document.createElement('i'); b.className='bar'; b.style.animationDelay=(i*-.08)+'s'; el.appendChild(b);} };
+    bars('senderMeter'); bars('receiverMeter');
+    function enter(next){ role=next; $('landing').classList.add('hidden'); $(next==='sender'?'senderApp':'receiverApp').classList.add('active'); audio=$(next==='sender'?'instrumentalAudio':'receiverAudio'); }
+    function goHome(){ if(socket) socket.close(); document.querySelectorAll('.app').forEach(x=>x.classList.remove('active')); $('landing').classList.remove('hidden'); }
+    function code(){ return $(role==='sender'?'senderCode':'receiverCode').value.trim().toUpperCase() || 'MOSES1'; }
+    function connect(){
+      if(socket) socket.close();
+      const protocol=location.protocol==='https:'?'wss':'ws';
+      socket=new WebSocket(protocol+'://'+location.host+'/?room='+encodeURIComponent(code()));
+      if(role==='receiver'){
+        audio.play().then(()=>{ audio.pause(); audio.currentTime=0; }).catch(()=>{});
+      }
+      socket.onopen=()=>{ $('connection').textContent='connected / '+code(); $(role==='sender'?'senderState':'receiverState').textContent=role==='receiver'?'Connected + audio ready':'Connected'; };
+      socket.onclose=()=>{ $('connection').textContent='offline'; };
+      socket.onmessage=e=>{ const msg=JSON.parse(e.data); if(role==='receiver' && msg.type==='transport' && msg.action==='play'){ audio.currentTime=msg.time; audio.play().catch(()=>{}); syncMeter(true); } };
+    }
+    function sendPlay(){ if(!socket || socket.readyState!==1) return alert('Connect to a session first.'); const tracks=senderTracks(); const time=tracks[0].currentTime; socket.send(JSON.stringify({type:'transport',action:'play',time})); tracks.forEach(track=>track.play().catch(()=>{})); syncMeter(true); }
+    function syncMeter(on){ const id=role==='sender'?'senderMeter':'receiverMeter'; $(id).parentElement.classList.toggle('playing',on); }
+    $('instrumentalAudio').src='audio/shadow-moses-instrumental.mp3'; $('mainVocalAudio').src='audio/shadow-moses-main-vocals.mp3'; $('receiverAudio').src='audio/shadow-moses-backing-vocals.mp3';
+    $('instrumentalAudio').addEventListener('play',()=>syncMeter(true)); $('receiverAudio').addEventListener('play',()=>syncMeter(true));
+  </script>
+</body>
+</html>
