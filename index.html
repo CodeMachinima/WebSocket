@@ -90,7 +90,8 @@
     </section>
   </div>
   <script>
-    let role = null, socket = null, audio = null, clockOffset = 0, clockReady = false, scheduledStart = null;
+    let role = null, socket = null, audio = null, audioContext = null, audioBuffers = {}, activeSources = [], pendingTransport = null, clockOffset = 0, clockReady = false, scheduledStart = null;
+    const audioFiles = { instrumental:'audio/shadow-moses-instrumental.mp3', mainVocal:'audio/shadow-moses-main-vocals.mp3', backingVocal:'audio/shadow-moses-backing-vocals.mp3' };
     const senderTracks = () => [$('instrumentalAudio'), $('mainVocalAudio')];
     const $ = id => document.getElementById(id);
     const bars = id => { const el=$(id); el.innerHTML=''; for(let i=0;i<28;i++){const b=document.createElement('i'); b.className='bar'; b.style.animationDelay=(i*-.08)+'s'; el.appendChild(b);} };
@@ -99,6 +100,15 @@
     function goHome(){ if(socket) socket.close(); if(scheduledStart) clearTimeout(scheduledStart); clockReady=false; document.querySelectorAll('.app').forEach(x=>x.classList.remove('active')); $('landing').classList.remove('hidden'); }
     function code(){ return $(role==='sender'?'senderCode':'receiverCode').value.trim().toUpperCase() || 'MOSES1'; }
     function localServerTime(){ return Date.now() + clockOffset; }
+    async function prepareAudio(){
+      if(!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      await audioContext.resume();
+      await Promise.all(Object.entries(audioFiles).map(async([name, file])=>{
+        if(audioBuffers[name]) return;
+        const response = await fetch(file);
+        audioBuffers[name] = await audioContext.decodeAudioData(await response.arrayBuffer());
+      }));
+    }
     function syncClock(){
       return new Promise(resolve => {
         const samples = [];
@@ -130,35 +140,60 @@
     function connect(){
       if(socket) socket.close();
       clockReady=false;
+      // Create/resume the audio engine directly from the Connect click so
+      // browsers' autoplay policies allow later scheduled playback.
+      if(!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      audioContext.resume().catch(()=>{});
       const protocol=location.protocol==='https:'?'wss':'ws';
       socket=new WebSocket(protocol+'://'+location.host+'/?room='+encodeURIComponent(code()));
-      if(role==='receiver'){
-        audio.play().then(()=>{ audio.pause(); audio.currentTime=0; }).catch(()=>{});
-      }
-      socket.onopen=async()=>{ $('connection').textContent='connected / syncing clock'; $(role==='sender'?'senderState':'receiverState').textContent='Syncing clock…'; await syncClock(); $('connection').textContent='connected / '+code(); $(role==='sender'?'senderState':'receiverState').textContent=role==='receiver'?'Connected + audio ready':'Connected'; };
+      socket.onopen=async()=>{
+        $('connection').textContent='connected / preparing audio';
+        $(role==='sender'?'senderState':'receiverState').textContent='Preparing audio…';
+        try {
+          await Promise.all([syncClock(), prepareAudio()]);
+          if(role==='receiver' && pendingTransport){ scheduleAudio(['backingVocal'], pendingTransport.time, pendingTransport.startAt); pendingTransport=null; }
+          $('connection').textContent='connected / '+code();
+          $(role==='sender'?'senderState':'receiverState').textContent=role==='receiver'?'Connected + audio ready':'Connected';
+        } catch {
+          $('connection').textContent='audio loading failed';
+          $(role==='sender'?'senderState':'receiverState').textContent='Audio unavailable';
+        }
+      };
       socket.onclose=()=>{ $('connection').textContent='offline'; };
       socket.onmessage=e=>{
         let msg;
         try { msg=JSON.parse(e.data); } catch { return; }
-        if(role==='receiver' && msg.type==='transport' && msg.action==='play') scheduleAudio([audio], msg.time, msg.startAt);
+        if(role==='receiver' && msg.type==='transport' && msg.action==='play'){
+          if(audioBuffers.backingVocal) scheduleAudio(['backingVocal'], msg.time, msg.startAt);
+          else pendingTransport=msg;
+        }
       };
     }
-    function scheduleAudio(tracks, time, startAt){
+    function scheduleAudio(trackNames, time, startAt){
       if(scheduledStart) clearTimeout(scheduledStart);
       const localStart = startAt - clockOffset;
       const delay = Math.max(0, localStart - Date.now());
       scheduledStart = setTimeout(()=>{
-        const elapsed = Math.max(0, (Date.now() - localStart) / 1000);
-        tracks.forEach(track=>{ track.currentTime=time + elapsed; track.play().catch(()=>{}); });
+        const remaining = (localStart - Date.now()) / 1000;
+        const startTime = audioContext.currentTime + Math.max(0.01, remaining);
+        const lateOffset = time + Math.max(0, -remaining);
+        activeSources.forEach(source=>{ try { source.stop(); } catch {} });
+        activeSources = trackNames.map(name=>{
+          const source = audioContext.createBufferSource();
+          source.buffer = audioBuffers[name];
+          source.connect(audioContext.destination);
+          source.start(startTime, lateOffset);
+          return source;
+        });
         syncMeter(true);
       }, delay);
     }
     function sendPlay(){
       if(!socket || socket.readyState!==1) return alert('Connect to a session first.');
       if(!clockReady) return alert('Still syncing the room clock. Try again in a moment.');
-      const tracks=senderTracks(), time=tracks[0].currentTime, startAt=localServerTime()+1000;
+      const time=0, startAt=localServerTime()+1000;
       socket.send(JSON.stringify({type:'transport',action:'play',time,startAt}));
-      scheduleAudio(tracks, time, startAt);
+      scheduleAudio(['instrumental','mainVocal'], time, startAt);
     }
     function syncMeter(on){ const id=role==='sender'?'senderMeter':'receiverMeter'; $(id).parentElement.classList.toggle('playing',on); }
     $('instrumentalAudio').src='audio/shadow-moses-instrumental.mp3'; $('mainVocalAudio').src='audio/shadow-moses-main-vocals.mp3'; $('receiverAudio').src='audio/shadow-moses-backing-vocals.mp3';
