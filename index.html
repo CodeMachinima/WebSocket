@@ -68,6 +68,7 @@
     .bar { flex:1; background:var(--red); opacity:.7; animation:pulse 1.2s ease-in-out infinite alternate; animation-play-state:paused; }
     .playing .bar { animation-play-state:running; }
     @keyframes pulse { from { height:20%; } to { height:95%; } }
+    @keyframes logo-pop { 0% { transform:rotate(var(--logo-rotation,0deg)) scale(1); } 42% { transform:rotate(var(--logo-rotation,0deg)) scale(1.16); } 100% { transform:rotate(var(--logo-rotation,0deg)) scale(1); } }
     .hint { margin:25px 0 0; color:var(--muted); font-size:12px; line-height:1.5; }
     .dark .hint { color:#aaa69d; }
     .back { margin-top:24px; background:transparent; border:1px solid var(--line); color:var(--ink); }
@@ -106,6 +107,8 @@
     .logo-visualizer canvas { position:absolute; inset:-15%; width:130%; height:130%; pointer-events:none; }
     .logo-visualizer img { position:absolute; inset:15%; width:70%; height:70%; object-fit:contain; filter:invert(1); mix-blend-mode:screen; }
     .logo-visualizer .logo-image { transform:rotate(var(--logo-rotation,0deg)); transform-origin:center; user-select:none; -webkit-user-drag:none; }
+    .logo-visualizer .logo-image { filter:brightness(0) saturate(100%) drop-shadow(0 0 0 var(--logo-color,#ffffff)); }
+    .logo-pop .logo-image { animation:logo-pop .22s cubic-bezier(.2,.9,.3,1); }
     .interactive-logo { cursor:grab; touch-action:none; }
     .interactive-logo:active { cursor:grabbing; }
     .logo-visualizer.receiver-logo { width:min(540px,70vw); }
@@ -118,13 +121,20 @@
     .participant .logo-visualizer canvas { inset:-10%; width:120%; height:120%; }
     .participant .logo-visualizer img { inset:8%; width:84%; height:84%; }
     .participant strong, .participant small { display:none; }
-    .live-pitch { width:min(540px,70vw); margin:0 auto; }
+    .live-controls { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; column-gap:24px; row-gap:8px; width:min(620px,84vw); margin:0 auto; }
+    .live-pitch, .live-volume { width:100%; margin:0; }
     .live-pitch .pitch-control { border-top:0; }
+    .live-volume .pitch-control { border-top:0; }
+    .logo-color-control { grid-column:2; grid-row:1 / span 2; }
+    .logo-color-control { display:flex; flex-direction:column; align-items:center; gap:8px; color:var(--muted); font:10px monospace; text-transform:uppercase; white-space:nowrap; }
+    .logo-color-control input { width:34px; height:34px; padding:0; border:1px solid var(--line); border-radius:50%; background:transparent; cursor:pointer; }
+    .logo-color-control input::-webkit-color-swatch-wrapper { padding:0; }
+    .logo-color-control input::-webkit-color-swatch { border:0; border-radius:50%; }
     .live-footer { display:flex; justify-content:center; align-items:center; margin:16px 0 24px; padding:0; border:0; }
     .live-footer span { display:none; }
     .live-footer button { margin:0; padding:8px 12px; border:0; color:var(--muted); font:10px monospace; text-transform:uppercase; }
     @media(max-width:900px) { .receiver-picks { grid-template-columns:repeat(3, minmax(0, 1fr)); } }
-    @media(max-width:720px) { .choices,.grid { grid-template-columns:1fr; } .receiver-picks { grid-template-columns:repeat(2, minmax(0, 1fr)); } .landing main { padding-top:28px; } .landing .role-map { grid-template-columns:1fr; gap:28px; } .landing .receiver-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } .landing .role-card { min-height:128px; } .app-head { align-items:flex-start; flex-direction:column; } .sender-live-layout { min-height:68vh; } .logo-visualizer { width:min(360px,78vw); } .logo-visualizer.receiver-logo { width:min(420px,84vw); } .live-pitch { width:84vw; } h1 { font-size:18vw; } }
+    @media(max-width:720px) { .choices,.grid { grid-template-columns:1fr; } .receiver-picks { grid-template-columns:repeat(2, minmax(0, 1fr)); } .landing main { padding-top:28px; } .landing .role-map { grid-template-columns:1fr; gap:28px; } .landing .receiver-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } .landing .role-card { min-height:128px; } .app-head { align-items:flex-start; flex-direction:column; } .sender-live-layout { min-height:68vh; } .logo-visualizer { width:min(360px,78vw); } .logo-visualizer.receiver-logo { width:min(420px,84vw); } .live-controls { width:84vw; column-gap:14px; } h1 { font-size:18vw; } }
     @media(max-width:430px) { .landing .receiver-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
   </style>
 </head>
@@ -165,17 +175,17 @@
     <section class="app" id="senderApp">
       <div class="app-head"><div><div class="eyebrow">01 / transmit</div><h2>Main sender</h2></div><div class="session-box">SESSION <input id="senderCode" maxlength="6" value="MOSES1" /><button onclick="connect()">Connect</button></div></div>
       <div class="grid setup-grid"><div class="panel"><div class="panel-title"><span>Your stem</span><span>Leader</span></div><div class="track"><div class="track-icon">◉</div><div class="track-copy"><strong>Main vocal</strong><small>Stem 01 / loaded automatically</small></div></div><audio id="mainVocalAudio"></audio><div class="transport"><button onclick="sendPlay()">▶ Play Shadow Moses together</button></div><p class="hint">Your main vocal starts on the shared clock and signals every connected receiver to start its assigned stem at the same timestamp.</p></div><div class="panel dark"><div class="panel-title"><span>Signal</span><span id="senderState">Not connected</span></div><div class="meter" id="senderMeter"></div><p class="hint">Share the session code with the stem performers. Each receiver chooses its own role from the landing page.</p><button class="back" onclick="goHome()">← Change role</button></div></div>
-      <div class="live-stage" id="senderLive"><div class="live-layout sender-live-layout"><div class="logo-visualizer interactive-logo" id="senderLogoVisualizer"><canvas id="senderVisualizerCanvas" aria-hidden="true"></canvas><img class="logo-image" draggable="false" src="assets/d7k201x-153b70f8-9c63-4d6a-afde-4095269b420e.png" alt="Sempiternal logo" /></div><div class="participant-rail" id="participantRail"></div></div><div class="live-pitch"><div class="pitch-control"><div class="pitch-label"><label for="senderPitch">Pitch</label><output id="senderPitchValue">0 semitones</output></div><input id="senderPitch" type="range" min="-12" max="12" step="1" value="0" oninput="setPitch(this.value)" /></div></div><div class="live-footer"><button onclick="goHome()">← Back</button></div></div>
+      <div class="live-stage" id="senderLive"><div class="live-layout sender-live-layout"><div class="logo-visualizer interactive-logo" id="senderLogoVisualizer"><canvas id="senderVisualizerCanvas" aria-hidden="true"></canvas><img class="logo-image" draggable="false" src="assets/d7k201x-153b70f8-9c63-4d6a-afde-4095269b420e.png" alt="Sempiternal logo" /></div><div class="participant-rail" id="participantRail"></div></div><div class="live-controls"><div class="live-pitch"><div class="pitch-control"><div class="pitch-label"><label for="senderPitch">Pitch</label><output id="senderPitchValue">0 semitones</output></div><input id="senderPitch" type="range" min="-12" max="12" step="1" value="0" oninput="setPitch(this.value)" /></div></div><div class="live-volume"><div class="pitch-control"><div class="pitch-label"><label for="senderVolume">Main vocals</label><output id="senderVolumeValue">100%</output></div><input id="senderVolume" type="range" min="0" max="100" step="1" value="100" oninput="setVolume(this.value)" /></div></div><label class="logo-color-control" for="senderColor">Color<input id="senderColor" type="color" value="#ffffff" oninput="setLogoColor(this.value)" /></label></div><div class="live-footer"><button onclick="goHome()">← Back</button></div></div>
     </section>
 
     <section class="app" id="receiverApp">
       <div class="app-head"><div><div class="eyebrow">02 / receive</div><h2 id="receiverTitle">Stem receiver</h2></div><div class="session-box">SESSION <input id="receiverCode" maxlength="6" value="MOSES1" /><button onclick="connect()">Connect</button></div></div>
       <div class="grid setup-grid"><div class="panel dark"><div class="panel-title"><span>Incoming stem</span><span>Follower</span></div><div class="track"><div class="track-icon">↗</div><div class="track-copy"><strong id="receiverStemTitle">Stem</strong><small id="receiverStemMeta">Loaded automatically</small></div></div><audio id="receiverAudio"></audio><div class="meter" id="receiverMeter"></div><p class="hint" id="receiverHint">Connect with the same code as the sender. Your stem begins when the sender presses play.</p><button class="back" onclick="goHome()">← Change role</button></div><div class="panel"><div class="panel-title"><span>Signal</span><span id="receiverState">Waiting for sender</span></div><h3 style="font-size:42px;letter-spacing:-.07em;margin:40px 0 10px;text-transform:uppercase;">Stay<br>in time.</h3><p class="hint">Keep this tab open and use headphones if the stems are playing in different rooms.</p></div></div>
-      <div class="live-stage" id="receiverLive"><div class="live-layout"><div class="logo-visualizer receiver-logo interactive-logo" id="receiverLogoVisualizer"><canvas id="receiverVisualizerCanvas" aria-hidden="true"></canvas><img class="logo-image" draggable="false" src="assets/d7k201x-153b70f8-9c63-4d6a-afde-4095269b420e.png" alt="Sempiternal logo" /></div></div><div class="live-pitch"><div class="pitch-control"><div class="pitch-label"><label for="receiverPitch">Pitch</label><output id="receiverPitchValue">0 semitones</output></div><input id="receiverPitch" type="range" min="-12" max="12" step="1" value="0" oninput="setPitch(this.value)" /></div></div><div class="live-footer"><button onclick="goHome()">← Back</button></div></div>
+      <div class="live-stage" id="receiverLive"><div class="live-layout"><div class="logo-visualizer receiver-logo interactive-logo" id="receiverLogoVisualizer"><canvas id="receiverVisualizerCanvas" aria-hidden="true"></canvas><img class="logo-image" draggable="false" src="assets/d7k201x-153b70f8-9c63-4d6a-afde-4095269b420e.png" alt="Sempiternal logo" /></div></div><div class="live-controls"><div class="live-pitch"><div class="pitch-control"><div class="pitch-label"><label for="receiverPitch">Pitch</label><output id="receiverPitchValue">0 semitones</output></div><input id="receiverPitch" type="range" min="-12" max="12" step="1" value="0" oninput="setPitch(this.value)" /></div></div><div class="live-volume"><div class="pitch-control"><div class="pitch-label"><label id="receiverVolumeLabel" for="receiverVolume">Instrument</label><output id="receiverVolumeValue">100%</output></div><input id="receiverVolume" type="range" min="0" max="100" step="1" value="100" oninput="setVolume(this.value)" /></div></div><label class="logo-color-control" for="receiverColor">Color<input id="receiverColor" type="color" value="#ffffff" oninput="setLogoColor(this.value)" /></label></div><div class="live-footer"><button onclick="goHome()">← Back</button></div></div>
     </section>
   </div>
   <script>
-    let role = null, receiverStem = null, socket = null, audioContext = null, audioBuffers = {}, activeSources = [], activePitchNodes = [], pendingTransport = null, pitchSemitones = 0, clockOffset = 0, clockReady = false, scheduledStart = null, levelTimer = null, pitchWorkletPromise = null, pitchWorkletReady = false, logoRotation = 0, logoSpinFrame = null, logoSpinActive = false, logoSpinLastTime = 0, logoBroadcastTime = 0;
+    let role = null, receiverStem = null, socket = null, audioContext = null, audioBuffers = {}, activeSources = [], activePitchNodes = [], activeGains = [], pendingTransport = null, pitchSemitones = 0, volumeLevel = 1, clockOffset = 0, clockReady = false, scheduledStart = null, levelTimer = null, pitchWorkletPromise = null, pitchWorkletReady = false, logoRotation = 0, logoColor = '#ffffff', logoSpinFrame = null, logoSpinActive = false, logoSpinLastTime = 0, logoBroadcastTime = 0;
     const audioFiles = {
       mainVocal:'audio/shadow-moses-main-vocals.mp3',
       guitar:'audio/stems/htdemucs_6s/shadow-moses-instrumental/guitar.mp3',
@@ -233,9 +243,11 @@
       if(which==='sender'){
         registerVisualizer('sender','senderVisualizerCanvas');
         enableLogoInteraction('senderLogoVisualizer',false);
+        applyLogoColor('senderLogoVisualizer',logoColor);
       } else {
         registerVisualizer('receiver','receiverVisualizerCanvas');
         enableLogoInteraction('receiverLogoVisualizer',true);
+        applyLogoColor('receiverLogoVisualizer',logoColor);
       }
       if(which==='sender') requestAnimationFrame(positionParticipants);
       startLogoSpin(which);
@@ -252,7 +264,7 @@
         logoSpinLastTime=now;
         logoRotation+=elapsed*18/1000;
         applyLogoRotation(logoId,logoRotation);
-        if(which==='receiver' && socket && socket.readyState===1 && now-logoBroadcastTime>50){
+        if(which==='receiver' && socket && socket.readyState===1 && now-logoBroadcastTime>16){
           socket.send(JSON.stringify({type:'rotation',rotation:logoRotation}));
           logoBroadcastTime=now;
         }
@@ -266,6 +278,25 @@
       element.style.setProperty('--logo-rotation',rotation+'deg');
       element.dataset.rotation=rotation;
     }
+    function applyLogoColor(id, color){
+      const element=$(id);
+      if(element) element.style.setProperty('--logo-color',color);
+    }
+    function setLogoColor(value){
+      logoColor=/^#[0-9a-f]{6}$/i.test(value) ? value.toLowerCase() : '#ffffff';
+      const id=role==='sender'?'senderLogoVisualizer':'receiverLogoVisualizer';
+      applyLogoColor(id,logoColor);
+      if(role==='receiver' && socket && socket.readyState===1) socket.send(JSON.stringify({type:'logo-color',color:logoColor}));
+    }
+    function triggerLogoPop(id){
+      const element=$(id);
+      if(!element) return;
+      element.classList.remove('logo-pop');
+      void element.offsetWidth;
+      element.classList.add('logo-pop');
+      clearTimeout(element.logoPopTimer);
+      element.logoPopTimer=setTimeout(()=>element.classList.remove('logo-pop'),240);
+    }
     function angleDelta(next, previous){
       return ((next-previous+540)%360)-180;
     }
@@ -275,18 +306,29 @@
       element.dataset.rotationReady='true';
       applyLogoRotation(id,logoRotation);
       element.addEventListener('dragstart',event=>event.preventDefault());
+      element.addEventListener('click',event=>{
+        event.preventDefault();
+        if(element.dataset.didDrag==='true'){
+          element.dataset.didDrag='false';
+          return;
+        }
+        triggerLogoPop(id);
+        if(broadcast && socket && socket.readyState===1) socket.send(JSON.stringify({type:'logo-click'}));
+      });
       element.addEventListener('pointerdown',event=>{
         event.preventDefault();
         const rect=element.getBoundingClientRect();
         element.setPointerCapture(event.pointerId);
         element.dataset.lastAngle=Math.atan2(event.clientY-(rect.top+rect.height/2),event.clientX-(rect.left+rect.width/2))*180/Math.PI;
         element.dataset.dragging='true';
+        element.dataset.didDrag='false';
       });
       element.addEventListener('pointermove',event=>{
         if(element.dataset.dragging!=='true') return;
         event.preventDefault();
         const rect=element.getBoundingClientRect();
         const currentAngle=Math.atan2(event.clientY-(rect.top+rect.height/2),event.clientX-(rect.left+rect.width/2))*180/Math.PI;
+        if(Math.abs(angleDelta(currentAngle,Number(element.dataset.lastAngle)||currentAngle))>2) element.dataset.didDrag='true';
         const rotation=Number(element.dataset.rotation)||0;
         const nextRotation=rotation+angleDelta(currentAngle,Number(element.dataset.lastAngle)||currentAngle)*0.65;
         element.dataset.lastAngle=currentAngle;
@@ -323,6 +365,7 @@
           rail.appendChild(card); registerVisualizer(id,id+'-canvas');
         }
         applyLogoRotation(id,Number(participant.rotation)||0);
+        applyLogoColor(id,participant.color||'#ffffff');
       });
       [...rail.children].forEach(card=>{ if(!active.has(card.id)){ visualizers.delete(card.id); card.remove(); } });
       requestAnimationFrame(positionParticipants);
@@ -337,14 +380,15 @@
         socket.send(JSON.stringify({type:'level',value:level,frequencies:Array.from(data)}));
       },80);
     }
-    function enter(next){ role=next; receiverStem=null; $('landing').classList.add('hidden'); $('senderApp').classList.add('active'); setPitch($('senderPitch').value); }
+    function enter(next){ role=next; receiverStem=null; $('landing').classList.add('hidden'); $('senderApp').classList.add('active'); setPitch($('senderPitch').value); setVolume($('senderVolume').value); }
     function enterReceiver(stem, label){
       role='receiver'; receiverStem=stem;
       $('receiverTitle').textContent=label+' receiver';
       $('receiverStemTitle').textContent=label;
+      $('receiverVolumeLabel').textContent=label;
       $('receiverStemMeta').textContent=stem==='backingVocal'?'Multiple performers welcome':'One performer per session';
       $('receiverHint').textContent=stem==='backingVocal'?'Connect with the same code as the sender. Multiple backing-vocal performers can join this session.':'Connect with the same code as the sender. This stem accepts one performer per session.';
-      $('landing').classList.add('hidden'); $('receiverApp').classList.add('active'); setPitch($('receiverPitch').value);
+      $('landing').classList.add('hidden'); $('receiverApp').classList.add('active'); setPitch($('receiverPitch').value); setVolume($('receiverVolume').value);
     }
     function goHome(){
       if(socket) socket.close();
@@ -356,10 +400,21 @@
       logoSpinLastTime=0;
       activeSources.forEach(source=>{ try { source.stop(); } catch {} });
       activePitchNodes.forEach(node=>{ try { node.disconnect(); } catch {} });
-      activeSources=[]; activePitchNodes=[]; pendingTransport=null; clockReady=false; visualizers.clear();
+      activeGains.forEach(gain=>{ try { gain.disconnect(); } catch {} });
+      activeSources=[]; activePitchNodes=[]; activeGains=[]; pendingTransport=null; clockReady=false; visualizers.clear();
       logoRotation=0;
+      logoColor='#ffffff';
+      volumeLevel=1;
       applyLogoRotation('senderLogoVisualizer',0);
       applyLogoRotation('receiverLogoVisualizer',0);
+      applyLogoColor('senderLogoVisualizer',logoColor);
+      applyLogoColor('receiverLogoVisualizer',logoColor);
+      if($('senderColor')) $('senderColor').value=logoColor;
+      if($('receiverColor')) $('receiverColor').value=logoColor;
+      if($('senderVolume')) $('senderVolume').value=100;
+      if($('receiverVolume')) $('receiverVolume').value=100;
+      if($('senderVolumeValue')) $('senderVolumeValue').textContent='100%';
+      if($('receiverVolumeValue')) $('receiverVolumeValue').textContent='100%';
       if($('participantRail')) $('participantRail').innerHTML='';
       document.querySelectorAll('.app').forEach(x=>x.classList.remove('active','live-mode'));
       document.body.classList.remove('live-mode');
@@ -373,6 +428,12 @@
       output.textContent=(pitchSemitones>0?'+':'')+pitchSemitones+' semitone'+(Math.abs(pitchSemitones)===1?'':'s');
       const ratio=Math.pow(2,pitchSemitones/12);
       activePitchNodes.forEach(node=>node.port.postMessage({ratio}));
+    }
+    function setVolume(value){
+      volumeLevel=Math.max(0,Math.min(1,Number(value)/100));
+      const output=$(role==='sender'?'senderVolumeValue':'receiverVolumeValue');
+      if(output) output.textContent=Math.round(volumeLevel*100)+'%';
+      activeGains.forEach(gain=>{ gain.gain.setTargetAtTime(volumeLevel,audioContext.currentTime,.01); });
     }
     function preparePitchShifter(){
       if(!audioContext || !audioContext.audioWorklet) return Promise.resolve(false);
@@ -449,6 +510,8 @@
         if(msg.type==='participants'){ updateParticipants(msg.participants||[]); return; }
         if(msg.type==='level' && role==='sender'){ setVisualizerLevel('participant-'+msg.clientId,msg.value,msg.frequencies); return; }
         if(msg.type==='rotation' && role==='sender'){ applyLogoRotation('participant-'+msg.clientId,Number(msg.rotation)||0); return; }
+        if(msg.type==='logo-click' && role==='sender'){ triggerLogoPop('participant-'+msg.clientId); return; }
+        if(msg.type==='logo-color' && role==='sender'){ applyLogoColor('participant-'+msg.clientId,msg.color||'#ffffff'); return; }
         if(role==='receiver' && msg.type==='transport' && msg.action==='play'){
           showLive('receiver');
           if(audioBuffers[receiverStem]) scheduleAudio([receiverStem], msg.time, msg.startAt);
@@ -476,10 +539,13 @@
         const lateOffset = time + Math.max(0, -remaining);
         activeSources.forEach(source=>{ try { source.stop(); } catch {} });
         activePitchNodes.forEach(node=>{ try { node.disconnect(); } catch {} });
+        activeGains.forEach(gain=>{ try { gain.disconnect(); } catch {} });
         activePitchNodes=[];
+        activeGains=[];
         activeSources = trackNames.map(name=>{
           const source = audioContext.createBufferSource();
           const analyser = audioContext.createAnalyser();
+          const gain = audioContext.createGain();
           analyser.fftSize = 128;
           analyser.smoothingTimeConstant = .8;
           source.buffer = audioBuffers[name];
@@ -488,8 +554,11 @@
             pitchNode.port.postMessage({ratio:Math.pow(2,pitchSemitones/12)});
             activePitchNodes.push(pitchNode);
             source.connect(pitchNode);
-            pitchNode.connect(analyser);
-          } else source.connect(analyser);
+            pitchNode.connect(gain);
+          } else source.connect(gain);
+          gain.gain.value=volumeLevel;
+          gain.connect(analyser);
+          activeGains.push(gain);
           analyser.connect(audioContext.destination);
           attachVisualizer(role==='sender'?'sender':'receiver',analyser);
           if(role==='receiver') startLevelBroadcast(analyser);

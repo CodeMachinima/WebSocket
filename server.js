@@ -16,7 +16,7 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, {'Content-Type': type}); res.end(data);
   });
 });
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ server, perMessageDeflate: false });
 const rooms = new Map();
 wss.on('connection', (client, req) => {
   const params = new URL(req.url, 'http://localhost').searchParams;
@@ -40,6 +40,7 @@ wss.on('connection', (client, req) => {
   client.stem = stem;
   client.id = randomUUID();
   client.rotation = 0;
+  client.logoColor = '#ffffff';
   roomState.clients.add(client);
   if (role === 'sender') roomState.sender = client;
   else if (singleReceiverStems.has(stem)) roomState.receivers.set(stem, client);
@@ -82,6 +83,28 @@ wss.on('connection', (client, req) => {
       return;
     }
 
+    if (payload.type === 'logo-click') {
+      if (client.role !== 'receiver') return;
+      const outgoing = JSON.stringify({ type: 'logo-click', clientId: client.id, stem: client.stem });
+      for (const peer of roomState.clients) {
+        if (peer !== client && peer.readyState === WebSocket.OPEN) peer.send(outgoing);
+      }
+      return;
+    }
+
+    if (payload.type === 'logo-color') {
+      if (client.role !== 'receiver') return;
+      const color = typeof payload.color === 'string' && /^#[0-9a-f]{6}$/i.test(payload.color)
+        ? payload.color.toLowerCase()
+        : '#ffffff';
+      client.logoColor = color;
+      const outgoing = JSON.stringify({ type: 'logo-color', clientId: client.id, stem: client.stem, color });
+      for (const peer of roomState.clients) {
+        if (peer !== client && peer.readyState === WebSocket.OPEN) peer.send(outgoing);
+      }
+      return;
+    }
+
     if (payload.type === 'transport' && client.role !== 'sender') return;
 
     const outgoing = JSON.stringify(payload.type === 'transport'
@@ -101,7 +124,7 @@ wss.on('connection', (client, req) => {
 });
 
 function broadcastParticipants(roomState) {
-  const participants = [...roomState.clients].map(client => ({ id: client.id, role: client.role, stem: client.stem, rotation: client.rotation || 0 }));
+  const participants = [...roomState.clients].map(client => ({ id: client.id, role: client.role, stem: client.stem, rotation: client.rotation || 0, color: client.logoColor || '#ffffff' }));
   const message = JSON.stringify({ type: 'participants', participants });
   for (const client of roomState.clients) {
     if (client.readyState === WebSocket.OPEN) client.send(message);
