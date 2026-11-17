@@ -11,7 +11,16 @@ class GranularPitchShifter extends AudioWorkletProcessor {
     this.ready = false;
     this.grains = [{ phase: 0, readIndex: 0 }, { phase: 0.5, readIndex: 0 }];
     this.port.onmessage = event => {
-      if (event.data && typeof event.data.ratio === 'number') this.ratio = event.data.ratio;
+      if (event.data && typeof event.data.ratio === 'number') {
+        const wasNeutral = Math.abs(this.ratio - 1) < 0.0001;
+        this.ratio = event.data.ratio;
+        if (wasNeutral && Math.abs(this.ratio - 1) >= 0.0001) {
+          const base = this.wrap(this.writeIndex - this.delay);
+          this.grains[0].readIndex = base;
+          this.grains[1].readIndex = this.wrap(base - this.grainSize * 0.5 * this.ratio);
+          this.ready = this.samplesWritten >= this.delay;
+        }
+      }
     };
   }
 
@@ -40,6 +49,11 @@ class GranularPitchShifter extends AudioWorkletProcessor {
         this.ready = true;
       }
       for (let channel = 0; channel < output.length; channel++) {
+        if (Math.abs(this.ratio - 1) < 0.0001) {
+          const inputChannel = input[channel] || input[0];
+          output[channel][i] = inputChannel ? inputChannel[i] : 0;
+          continue;
+        }
         if (!this.ready) { output[channel][i] = 0; continue; }
         let value = 0, weight = 0;
         for (const grain of this.grains) {

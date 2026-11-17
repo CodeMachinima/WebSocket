@@ -376,7 +376,7 @@
       const outputLatency = typeof audioContext.outputLatency === 'number'
         ? audioContext.outputLatency
         : (audioContext.baseLatency || 0);
-      const pitchProcessingLatency = pitchWorkletReady ? 4096 / audioContext.sampleRate : 0;
+      const pitchProcessingLatency = pitchWorkletReady && pitchSemitones !== 0 ? 4096 / audioContext.sampleRate : 0;
       const scheduleLead = outputLatency + pitchProcessingLatency;
       const delay = Math.max(0, localStart - Date.now() - scheduleLead * 1000);
       scheduledStart = setTimeout(()=>{
