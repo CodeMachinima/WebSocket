@@ -94,33 +94,34 @@
     .landing .sender-card small { color:#aaa69d; }
     .landing .sender-card:hover { background:#111; box-shadow:6px 6px 0 var(--red); }
     .landing .landing-note { margin:18px 0 0; text-align:center; color:var(--muted); font:10px monospace; letter-spacing:.12em; text-transform:uppercase; }
-    .live-stage { display:none; min-height:calc(100vh - 190px); padding:30px 0 50px; }
+    .live-stage { display:none; min-height:100vh; padding:0; width:100%; flex-direction:column; justify-content:center; align-items:center; }
+    body.live-mode > .wrap > header { display:none; }
     .app.live-mode .setup-grid { display:none; }
-    .app.live-mode .live-stage { display:block; }
-    .app.live-mode .app-head { border-bottom:0; padding-bottom:0; }
-    .live-heading { display:flex; justify-content:space-between; align-items:baseline; gap:20px; margin-bottom:22px; }
-    .live-heading h3 { margin:0; font-size:12px; letter-spacing:.15em; text-transform:uppercase; }
-    .live-heading span { color:var(--muted); font:11px monospace; text-transform:uppercase; }
-    .live-layout { display:flex; align-items:center; justify-content:center; gap:clamp(22px,5vw,72px); min-height:430px; }
+    .app.live-mode .live-stage { display:flex; }
+    .app.live-mode > .app-head { display:none; }
+    .live-heading { display:none; }
+    .live-layout { display:flex; align-items:center; justify-content:center; width:100%; min-height:0; }
+    .sender-live-layout { position:relative; min-height:min(78vh,680px); }
     .logo-visualizer { position:relative; width:min(440px,62vw); aspect-ratio:1; flex:0 0 auto; }
     .logo-visualizer canvas { position:absolute; inset:-15%; width:130%; height:130%; pointer-events:none; }
     .logo-visualizer img { position:absolute; inset:15%; width:70%; height:70%; object-fit:contain; filter:invert(1); mix-blend-mode:screen; }
     .logo-visualizer.receiver-logo { width:min(540px,70vw); }
     .logo-visualizer.receiver-logo canvas { inset:-10%; width:120%; height:120%; }
     .logo-visualizer.receiver-logo img { inset:8%; width:84%; height:84%; }
-    .participant-rail { display:flex; flex-wrap:wrap; justify-content:center; align-content:center; gap:18px; max-width:360px; }
-    .participant { display:flex; flex-direction:column; align-items:center; width:102px; color:var(--ink); }
+    .sender-live-layout > .logo-visualizer { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); }
+    .participant-rail { position:absolute; inset:0; max-width:none; pointer-events:none; }
+    .participant { position:absolute; display:flex; flex-direction:column; align-items:center; width:84px; color:var(--ink); transform:translate(-50%,-50%); }
     .participant .logo-visualizer { width:92px; }
     .participant .logo-visualizer canvas { inset:-10%; width:120%; height:120%; }
     .participant .logo-visualizer img { inset:18%; width:64%; height:64%; }
-    .participant strong { margin-top:8px; font-size:10px; letter-spacing:.12em; text-transform:uppercase; text-align:center; }
-    .participant small { margin-top:4px; color:var(--muted); font:9px monospace; text-transform:uppercase; text-align:center; }
-    .live-pitch { width:min(540px,70vw); margin:8px auto 0; }
+    .participant strong, .participant small { display:none; }
+    .live-pitch { width:min(540px,70vw); margin:0 auto; }
     .live-pitch .pitch-control { border-top:0; }
-    .live-footer { display:flex; justify-content:space-between; align-items:center; gap:20px; margin-top:22px; padding-top:18px; border-top:1px solid var(--line); color:var(--muted); font:10px monospace; text-transform:uppercase; }
-    .live-footer button { margin:0; }
+    .live-footer { display:flex; justify-content:center; align-items:center; margin:16px 0 24px; padding:0; border:0; }
+    .live-footer span { display:none; }
+    .live-footer button { margin:0; padding:8px 12px; border:0; color:var(--muted); font:10px monospace; text-transform:uppercase; }
     @media(max-width:900px) { .receiver-picks { grid-template-columns:repeat(3, minmax(0, 1fr)); } }
-    @media(max-width:720px) { .choices,.grid { grid-template-columns:1fr; } .receiver-picks { grid-template-columns:repeat(2, minmax(0, 1fr)); } .landing main { padding-top:28px; } .landing .role-map { grid-template-columns:1fr; gap:28px; } .landing .receiver-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } .landing .role-card { min-height:128px; } .app-head { align-items:flex-start; flex-direction:column; } .live-layout { flex-direction:column; min-height:0; } .logo-visualizer { width:min(360px,78vw); } .logo-visualizer.receiver-logo { width:min(420px,84vw); } .participant-rail { max-width:100%; } .live-pitch { width:100%; } h1 { font-size:18vw; } }
+    @media(max-width:720px) { .choices,.grid { grid-template-columns:1fr; } .receiver-picks { grid-template-columns:repeat(2, minmax(0, 1fr)); } .landing main { padding-top:28px; } .landing .role-map { grid-template-columns:1fr; gap:28px; } .landing .receiver-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } .landing .role-card { min-height:128px; } .app-head { align-items:flex-start; flex-direction:column; } .sender-live-layout { min-height:68vh; } .logo-visualizer { width:min(360px,78vw); } .logo-visualizer.receiver-logo { width:min(420px,84vw); } .live-pitch { width:84vw; } h1 { font-size:18vw; } }
     @media(max-width:430px) { .landing .receiver-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
   </style>
 </head>
@@ -161,13 +162,13 @@
     <section class="app" id="senderApp">
       <div class="app-head"><div><div class="eyebrow">01 / transmit</div><h2>Main sender</h2></div><div class="session-box">SESSION <input id="senderCode" maxlength="6" value="MOSES1" /><button onclick="connect()">Connect</button></div></div>
       <div class="grid setup-grid"><div class="panel"><div class="panel-title"><span>Your stem</span><span>Leader</span></div><div class="track"><div class="track-icon">◉</div><div class="track-copy"><strong>Main vocal</strong><small>Stem 01 / loaded automatically</small></div></div><audio id="mainVocalAudio"></audio><div class="transport"><button onclick="sendPlay()">▶ Play Shadow Moses together</button></div><p class="hint">Your main vocal starts on the shared clock and signals every connected receiver to start its assigned stem at the same timestamp.</p></div><div class="panel dark"><div class="panel-title"><span>Signal</span><span id="senderState">Not connected</span></div><div class="meter" id="senderMeter"></div><p class="hint">Share the session code with the stem performers. Each receiver chooses its own role from the landing page.</p><button class="back" onclick="goHome()">← Change role</button></div></div>
-      <div class="live-stage" id="senderLive"><div class="live-heading"><h3>Sender / vocals</h3><span>Live signal · connected performers</span></div><div class="live-layout"><div class="logo-visualizer"><canvas id="senderVisualizerCanvas" aria-hidden="true"></canvas><img src="assets/d7k201x-153b70f8-9c63-4d6a-afde-4095269b420e.png" alt="Sempiternal logo" /></div><div class="participant-rail" id="participantRail"></div></div><div class="live-pitch"><div class="pitch-control"><div class="pitch-label"><label for="senderPitch">Main vocal pitch</label><output id="senderPitchValue">0 semitones</output></div><input id="senderPitch" type="range" min="-12" max="12" step="1" value="0" oninput="setPitch(this.value)" /></div></div><div class="live-footer"><span>Vocals / live</span><button onclick="goHome()">← Change role</button></div></div>
+      <div class="live-stage" id="senderLive"><div class="live-layout sender-live-layout"><div class="logo-visualizer"><canvas id="senderVisualizerCanvas" aria-hidden="true"></canvas><img src="assets/d7k201x-153b70f8-9c63-4d6a-afde-4095269b420e.png" alt="Sempiternal logo" /></div><div class="participant-rail" id="participantRail"></div></div><div class="live-pitch"><div class="pitch-control"><div class="pitch-label"><label for="senderPitch">Pitch</label><output id="senderPitchValue">0 semitones</output></div><input id="senderPitch" type="range" min="-12" max="12" step="1" value="0" oninput="setPitch(this.value)" /></div></div><div class="live-footer"><button onclick="goHome()">← Back</button></div></div>
     </section>
 
     <section class="app" id="receiverApp">
       <div class="app-head"><div><div class="eyebrow">02 / receive</div><h2 id="receiverTitle">Stem receiver</h2></div><div class="session-box">SESSION <input id="receiverCode" maxlength="6" value="MOSES1" /><button onclick="connect()">Connect</button></div></div>
       <div class="grid setup-grid"><div class="panel dark"><div class="panel-title"><span>Incoming stem</span><span>Follower</span></div><div class="track"><div class="track-icon">↗</div><div class="track-copy"><strong id="receiverStemTitle">Stem</strong><small id="receiverStemMeta">Loaded automatically</small></div></div><audio id="receiverAudio"></audio><div class="meter" id="receiverMeter"></div><p class="hint" id="receiverHint">Connect with the same code as the sender. Your stem begins when the sender presses play.</p><button class="back" onclick="goHome()">← Change role</button></div><div class="panel"><div class="panel-title"><span>Signal</span><span id="receiverState">Waiting for sender</span></div><h3 style="font-size:42px;letter-spacing:-.07em;margin:40px 0 10px;text-transform:uppercase;">Stay<br>in time.</h3><p class="hint">Keep this tab open and use headphones if the stems are playing in different rooms.</p></div></div>
-      <div class="live-stage" id="receiverLive"><div class="live-heading"><h3 id="receiverLiveHeading">Receiver / stem</h3><span>Live signal · synchronized</span></div><div class="live-layout"><div class="logo-visualizer receiver-logo"><canvas id="receiverVisualizerCanvas" aria-hidden="true"></canvas><img src="assets/d7k201x-153b70f8-9c63-4d6a-afde-4095269b420e.png" alt="Sempiternal logo" /></div></div><div class="live-pitch"><div class="pitch-control"><div class="pitch-label"><label for="receiverPitch">Pitch</label><output id="receiverPitchValue">0 semitones</output></div><input id="receiverPitch" type="range" min="-12" max="12" step="1" value="0" oninput="setPitch(this.value)" /></div></div><div class="live-footer"><span id="receiverLiveStem">Stem / live</span><button onclick="goHome()">← Change role</button></div></div>
+      <div class="live-stage" id="receiverLive"><div class="live-layout"><div class="logo-visualizer receiver-logo"><canvas id="receiverVisualizerCanvas" aria-hidden="true"></canvas><img src="assets/d7k201x-153b70f8-9c63-4d6a-afde-4095269b420e.png" alt="Sempiternal logo" /></div></div><div class="live-pitch"><div class="pitch-control"><div class="pitch-label"><label for="receiverPitch">Pitch</label><output id="receiverPitchValue">0 semitones</output></div><input id="receiverPitch" type="range" min="-12" max="12" step="1" value="0" oninput="setPitch(this.value)" /></div></div><div class="live-footer"><button onclick="goHome()">← Back</button></div></div>
     </section>
   </div>
   <script>
@@ -215,16 +216,29 @@
       requestAnimationFrame(visualizerFrame);
     }
     requestAnimationFrame(visualizerFrame);
+    window.addEventListener('resize',positionParticipants);
     function showLive(which){
       const app=$(which==='sender'?'senderApp':'receiverApp');
       app.classList.add('live-mode');
+      document.body.classList.add('live-mode');
       if(which==='sender') registerVisualizer('sender','senderVisualizerCanvas');
       else registerVisualizer('receiver','receiverVisualizerCanvas');
+      if(which==='sender') requestAnimationFrame(positionParticipants);
+    }
+    function positionParticipants(){
+      const rail=$('participantRail');
+      if(!rail || !rail.children.length) return;
+      const radius=Math.min(330,Math.max(145,rail.clientWidth*.34));
+      [...rail.children].forEach((card,index)=>{
+        const angle=-Math.PI/2 + index * Math.PI*2 / rail.children.length;
+        card.style.left=`calc(50% + ${Math.cos(angle)*radius}px)`;
+        card.style.top=`calc(50% + ${Math.sin(angle)*radius}px)`;
+      });
     }
     function updateParticipants(participants){
       if(role!=='sender') return;
-      const rail=$('participantRail'), active=new Set();
-      participants.filter(participant=>participant.role==='receiver').forEach(participant=>{
+      const rail=$('participantRail'), active=new Set(), receivers=participants.filter(participant=>participant.role==='receiver');
+      receivers.forEach(participant=>{
         const id='participant-'+participant.id; active.add(id);
         if(!$(id)){
           const card=document.createElement('div'); card.className='participant'; card.id=id;
@@ -233,6 +247,7 @@
         }
       });
       [...rail.children].forEach(card=>{ if(!active.has(card.id)){ visualizers.delete(card.id); card.remove(); } });
+      requestAnimationFrame(positionParticipants);
     }
     function startLevelBroadcast(analyser){
       if(levelTimer) clearInterval(levelTimer);
@@ -249,8 +264,6 @@
       role='receiver'; receiverStem=stem;
       $('receiverTitle').textContent=label+' receiver';
       $('receiverStemTitle').textContent=label;
-      $('receiverLiveHeading').textContent='Receiver / '+label;
-      $('receiverLiveStem').textContent=label+' / live';
       $('receiverStemMeta').textContent=stem==='backingVocal'?'Multiple performers welcome':'One performer per session';
       $('receiverHint').textContent=stem==='backingVocal'?'Connect with the same code as the sender. Multiple backing-vocal performers can join this session.':'Connect with the same code as the sender. This stem accepts one performer per session.';
       $('landing').classList.add('hidden'); $('receiverApp').classList.add('active'); setPitch($('receiverPitch').value);
@@ -264,6 +277,7 @@
       activeSources=[]; activePitchNodes=[]; pendingTransport=null; clockReady=false; visualizers.clear();
       if($('participantRail')) $('participantRail').innerHTML='';
       document.querySelectorAll('.app').forEach(x=>x.classList.remove('active','live-mode'));
+      document.body.classList.remove('live-mode');
       $('landing').classList.remove('hidden');
     }
     function code(){ return $(role==='sender'?'senderCode':'receiverCode').value.trim().toUpperCase() || 'MOSES1'; }
