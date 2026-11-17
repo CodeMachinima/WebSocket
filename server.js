@@ -39,6 +39,7 @@ wss.on('connection', (client, req) => {
   client.role = role;
   client.stem = stem;
   client.id = randomUUID();
+  client.rotation = 0;
   roomState.clients.add(client);
   if (role === 'sender') roomState.sender = client;
   else if (singleReceiverStems.has(stem)) roomState.receivers.set(stem, client);
@@ -60,7 +61,21 @@ wss.on('connection', (client, req) => {
     if (payload.type === 'level') {
       if (client.role !== 'receiver') return;
       const value = Math.max(0, Math.min(1, Number(payload.value) || 0));
-      const outgoing = JSON.stringify({ type: 'level', clientId: client.id, stem: client.stem, value });
+      const frequencies = Array.isArray(payload.frequencies)
+        ? payload.frequencies.slice(0, 96).map(sample => Math.max(0, Math.min(255, Number(sample) || 0)))
+        : [];
+      const outgoing = JSON.stringify({ type: 'level', clientId: client.id, stem: client.stem, value, frequencies });
+      for (const peer of roomState.clients) {
+        if (peer !== client && peer.readyState === WebSocket.OPEN) peer.send(outgoing);
+      }
+      return;
+    }
+
+    if (payload.type === 'rotation') {
+      if (client.role !== 'receiver') return;
+      const rotation = Math.max(-1000000, Math.min(1000000, Number(payload.rotation) || 0));
+      client.rotation = rotation;
+      const outgoing = JSON.stringify({ type: 'rotation', clientId: client.id, stem: client.stem, rotation });
       for (const peer of roomState.clients) {
         if (peer !== client && peer.readyState === WebSocket.OPEN) peer.send(outgoing);
       }
@@ -86,7 +101,7 @@ wss.on('connection', (client, req) => {
 });
 
 function broadcastParticipants(roomState) {
-  const participants = [...roomState.clients].map(client => ({ id: client.id, role: client.role, stem: client.stem }));
+  const participants = [...roomState.clients].map(client => ({ id: client.id, role: client.role, stem: client.stem, rotation: client.rotation || 0 }));
   const message = JSON.stringify({ type: 'participants', participants });
   for (const client of roomState.clients) {
     if (client.readyState === WebSocket.OPEN) client.send(message);
