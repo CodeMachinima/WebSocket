@@ -171,7 +171,7 @@
     </section>
   </div>
   <script>
-    let role = null, receiverStem = null, socket = null, audioContext = null, audioBuffers = {}, activeSources = [], pendingTransport = null, pitchSemitones = 0, clockOffset = 0, clockReady = false, scheduledStart = null, levelTimer = null;
+    let role = null, receiverStem = null, socket = null, audioContext = null, audioBuffers = {}, activeSources = [], activePitchNodes = [], pendingTransport = null, pitchSemitones = 0, clockOffset = 0, clockReady = false, scheduledStart = null, levelTimer = null, pitchWorkletPromise = null, pitchWorkletReady = false;
     const audioFiles = {
       mainVocal:'audio/shadow-moses-main-vocals.mp3',
       guitar:'audio/stems/htdemucs_6s/shadow-moses-instrumental/guitar.mp3',
@@ -260,7 +260,8 @@
       if(scheduledStart) clearTimeout(scheduledStart);
       if(levelTimer) clearInterval(levelTimer);
       activeSources.forEach(source=>{ try { source.stop(); } catch {} });
-      activeSources=[]; pendingTransport=null; clockReady=false; visualizers.clear();
+      activePitchNodes.forEach(node=>{ try { node.disconnect(); } catch {} });
+      activeSources=[]; activePitchNodes=[]; pendingTransport=null; clockReady=false; visualizers.clear();
       if($('participantRail')) $('participantRail').innerHTML='';
       document.querySelectorAll('.app').forEach(x=>x.classList.remove('active','live-mode'));
       $('landing').classList.remove('hidden');
@@ -271,7 +272,15 @@
       pitchSemitones=Number(value);
       const output=$(role==='sender'?'senderPitchValue':'receiverPitchValue');
       output.textContent=(pitchSemitones>0?'+':'')+pitchSemitones+' semitone'+(Math.abs(pitchSemitones)===1?'':'s');
-      activeSources.forEach(source=>{ source.detune.value=pitchSemitones*100; });
+      const ratio=Math.pow(2,pitchSemitones/12);
+      activePitchNodes.forEach(node=>node.port.postMessage({ratio}));
+    }
+    function preparePitchShifter(){
+      if(!audioContext || !audioContext.audioWorklet) return Promise.resolve(false);
+      if(!pitchWorkletPromise){
+        pitchWorkletPromise=audioContext.audioWorklet.addModule('pitch-shifter.js').then(()=>{ pitchWorkletReady=true; return true; }).catch(()=>false);
+      }
+      return pitchWorkletPromise;
     }
     async function prepareAudio(names){
       if(!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -325,7 +334,7 @@
         $('connection').textContent='connected / preparing audio';
         $(role==='sender'?'senderState':'receiverState').textContent='Preparing audio…';
         try {
-          await Promise.all([syncClock(), prepareAudio([role==='sender'?'mainVocal':receiverStem])]);
+          await Promise.all([syncClock(), prepareAudio([role==='sender'?'mainVocal':receiverStem]), preparePitchShifter()]);
           if(role==='receiver' && pendingTransport){ scheduleAudio([receiverStem], pendingTransport.time, pendingTransport.startAt); pendingTransport=null; }
           $('connection').textContent='connected / '+code();
           $(role==='sender'?'senderState':'receiverState').textContent=role==='receiver'?'Connected + audio ready':'Connected';
@@ -350,7 +359,12 @@
     function scheduleAudio(trackNames, time, startAt){
       if(scheduledStart) clearTimeout(scheduledStart);
       const localStart = startAt - clockOffset;
-      const delay = Math.max(0, localStart - Date.now());
+      const outputLatency = typeof audioContext.outputLatency === 'number'
+        ? audioContext.outputLatency
+        : (audioContext.baseLatency || 0);
+      const pitchProcessingLatency = pitchWorkletReady ? 4096 / audioContext.sampleRate : 0;
+      const scheduleLead = outputLatency + pitchProcessingLatency;
+      const delay = Math.max(0, localStart - Date.now() - scheduleLead * 1000);
       scheduledStart = setTimeout(()=>{
         const remaining = (localStart - Date.now()) / 1000;
         // The Web Audio clock is shared through the server, but each device's
@@ -358,20 +372,24 @@
         // the audible signal reaches the speakers at the shared start time.
         // `outputLatency` is the best browser estimate; `baseLatency` is the
         // fallback on browsers that do not expose it.
-        const outputLatency = typeof audioContext.outputLatency === 'number'
-          ? audioContext.outputLatency
-          : (audioContext.baseLatency || 0);
-        const startTime = audioContext.currentTime + Math.max(0.01, remaining - outputLatency);
+        const startTime = audioContext.currentTime + Math.max(0.01, remaining - outputLatency - pitchProcessingLatency);
         const lateOffset = time + Math.max(0, -remaining);
         activeSources.forEach(source=>{ try { source.stop(); } catch {} });
+        activePitchNodes.forEach(node=>{ try { node.disconnect(); } catch {} });
+        activePitchNodes=[];
         activeSources = trackNames.map(name=>{
           const source = audioContext.createBufferSource();
           const analyser = audioContext.createAnalyser();
           analyser.fftSize = 128;
           analyser.smoothingTimeConstant = .8;
           source.buffer = audioBuffers[name];
-          source.detune.value = pitchSemitones * 100;
-          source.connect(analyser);
+          const pitchNode = pitchWorkletReady ? new AudioWorkletNode(audioContext,'granular-pitch-shifter') : null;
+          if(pitchNode){
+            pitchNode.port.postMessage({ratio:Math.pow(2,pitchSemitones/12)});
+            activePitchNodes.push(pitchNode);
+            source.connect(pitchNode);
+            pitchNode.connect(analyser);
+          } else source.connect(analyser);
           analyser.connect(audioContext.destination);
           attachVisualizer(role==='sender'?'sender':'receiver',analyser);
           if(role==='receiver') startLevelBroadcast(analyser);
