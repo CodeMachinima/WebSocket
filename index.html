@@ -105,7 +105,7 @@
     .logo-visualizer { position:relative; width:min(440px,62vw); aspect-ratio:1; flex:0 0 auto; }
     .logo-visualizer canvas { position:absolute; inset:-15%; width:130%; height:130%; pointer-events:none; }
     .logo-visualizer img { position:absolute; inset:15%; width:70%; height:70%; object-fit:contain; filter:invert(1); mix-blend-mode:screen; }
-    .logo-visualizer .logo-image { transform:rotate(var(--logo-rotation,0deg)); transform-origin:center; }
+    .logo-visualizer .logo-image { transform:rotate(var(--logo-rotation,0deg)); transform-origin:center; user-select:none; -webkit-user-drag:none; }
     .interactive-logo { cursor:grab; touch-action:none; }
     .interactive-logo:active { cursor:grabbing; }
     .logo-visualizer.receiver-logo { width:min(540px,70vw); }
@@ -165,17 +165,17 @@
     <section class="app" id="senderApp">
       <div class="app-head"><div><div class="eyebrow">01 / transmit</div><h2>Main sender</h2></div><div class="session-box">SESSION <input id="senderCode" maxlength="6" value="MOSES1" /><button onclick="connect()">Connect</button></div></div>
       <div class="grid setup-grid"><div class="panel"><div class="panel-title"><span>Your stem</span><span>Leader</span></div><div class="track"><div class="track-icon">◉</div><div class="track-copy"><strong>Main vocal</strong><small>Stem 01 / loaded automatically</small></div></div><audio id="mainVocalAudio"></audio><div class="transport"><button onclick="sendPlay()">▶ Play Shadow Moses together</button></div><p class="hint">Your main vocal starts on the shared clock and signals every connected receiver to start its assigned stem at the same timestamp.</p></div><div class="panel dark"><div class="panel-title"><span>Signal</span><span id="senderState">Not connected</span></div><div class="meter" id="senderMeter"></div><p class="hint">Share the session code with the stem performers. Each receiver chooses its own role from the landing page.</p><button class="back" onclick="goHome()">← Change role</button></div></div>
-      <div class="live-stage" id="senderLive"><div class="live-layout sender-live-layout"><div class="logo-visualizer interactive-logo" id="senderLogoVisualizer"><canvas id="senderVisualizerCanvas" aria-hidden="true"></canvas><img class="logo-image" src="assets/d7k201x-153b70f8-9c63-4d6a-afde-4095269b420e.png" alt="Sempiternal logo" /></div><div class="participant-rail" id="participantRail"></div></div><div class="live-pitch"><div class="pitch-control"><div class="pitch-label"><label for="senderPitch">Pitch</label><output id="senderPitchValue">0 semitones</output></div><input id="senderPitch" type="range" min="-12" max="12" step="1" value="0" oninput="setPitch(this.value)" /></div></div><div class="live-footer"><button onclick="goHome()">← Back</button></div></div>
+      <div class="live-stage" id="senderLive"><div class="live-layout sender-live-layout"><div class="logo-visualizer interactive-logo" id="senderLogoVisualizer"><canvas id="senderVisualizerCanvas" aria-hidden="true"></canvas><img class="logo-image" draggable="false" src="assets/d7k201x-153b70f8-9c63-4d6a-afde-4095269b420e.png" alt="Sempiternal logo" /></div><div class="participant-rail" id="participantRail"></div></div><div class="live-pitch"><div class="pitch-control"><div class="pitch-label"><label for="senderPitch">Pitch</label><output id="senderPitchValue">0 semitones</output></div><input id="senderPitch" type="range" min="-12" max="12" step="1" value="0" oninput="setPitch(this.value)" /></div></div><div class="live-footer"><button onclick="goHome()">← Back</button></div></div>
     </section>
 
     <section class="app" id="receiverApp">
       <div class="app-head"><div><div class="eyebrow">02 / receive</div><h2 id="receiverTitle">Stem receiver</h2></div><div class="session-box">SESSION <input id="receiverCode" maxlength="6" value="MOSES1" /><button onclick="connect()">Connect</button></div></div>
       <div class="grid setup-grid"><div class="panel dark"><div class="panel-title"><span>Incoming stem</span><span>Follower</span></div><div class="track"><div class="track-icon">↗</div><div class="track-copy"><strong id="receiverStemTitle">Stem</strong><small id="receiverStemMeta">Loaded automatically</small></div></div><audio id="receiverAudio"></audio><div class="meter" id="receiverMeter"></div><p class="hint" id="receiverHint">Connect with the same code as the sender. Your stem begins when the sender presses play.</p><button class="back" onclick="goHome()">← Change role</button></div><div class="panel"><div class="panel-title"><span>Signal</span><span id="receiverState">Waiting for sender</span></div><h3 style="font-size:42px;letter-spacing:-.07em;margin:40px 0 10px;text-transform:uppercase;">Stay<br>in time.</h3><p class="hint">Keep this tab open and use headphones if the stems are playing in different rooms.</p></div></div>
-      <div class="live-stage" id="receiverLive"><div class="live-layout"><div class="logo-visualizer receiver-logo interactive-logo" id="receiverLogoVisualizer"><canvas id="receiverVisualizerCanvas" aria-hidden="true"></canvas><img class="logo-image" src="assets/d7k201x-153b70f8-9c63-4d6a-afde-4095269b420e.png" alt="Sempiternal logo" /></div></div><div class="live-pitch"><div class="pitch-control"><div class="pitch-label"><label for="receiverPitch">Pitch</label><output id="receiverPitchValue">0 semitones</output></div><input id="receiverPitch" type="range" min="-12" max="12" step="1" value="0" oninput="setPitch(this.value)" /></div></div><div class="live-footer"><button onclick="goHome()">← Back</button></div></div>
+      <div class="live-stage" id="receiverLive"><div class="live-layout"><div class="logo-visualizer receiver-logo interactive-logo" id="receiverLogoVisualizer"><canvas id="receiverVisualizerCanvas" aria-hidden="true"></canvas><img class="logo-image" draggable="false" src="assets/d7k201x-153b70f8-9c63-4d6a-afde-4095269b420e.png" alt="Sempiternal logo" /></div></div><div class="live-pitch"><div class="pitch-control"><div class="pitch-label"><label for="receiverPitch">Pitch</label><output id="receiverPitchValue">0 semitones</output></div><input id="receiverPitch" type="range" min="-12" max="12" step="1" value="0" oninput="setPitch(this.value)" /></div></div><div class="live-footer"><button onclick="goHome()">← Back</button></div></div>
     </section>
   </div>
   <script>
-    let role = null, receiverStem = null, socket = null, audioContext = null, audioBuffers = {}, activeSources = [], activePitchNodes = [], pendingTransport = null, pitchSemitones = 0, clockOffset = 0, clockReady = false, scheduledStart = null, levelTimer = null, pitchWorkletPromise = null, pitchWorkletReady = false, logoRotation = 0;
+    let role = null, receiverStem = null, socket = null, audioContext = null, audioBuffers = {}, activeSources = [], activePitchNodes = [], pendingTransport = null, pitchSemitones = 0, clockOffset = 0, clockReady = false, scheduledStart = null, levelTimer = null, pitchWorkletPromise = null, pitchWorkletReady = false, logoRotation = 0, logoSpinFrame = null, logoSpinActive = false, logoSpinLastTime = 0, logoBroadcastTime = 0;
     const audioFiles = {
       mainVocal:'audio/shadow-moses-main-vocals.mp3',
       guitar:'audio/stems/htdemucs_6s/shadow-moses-instrumental/guitar.mp3',
@@ -238,6 +238,27 @@
         enableLogoInteraction('receiverLogoVisualizer',true);
       }
       if(which==='sender') requestAnimationFrame(positionParticipants);
+      startLogoSpin(which);
+    }
+    function startLogoSpin(which){
+      if(logoSpinActive) return;
+      logoSpinActive=true;
+      logoSpinLastTime=0;
+      const logoId=which==='sender'?'senderLogoVisualizer':'receiverLogoVisualizer';
+      const tick=now=>{
+        if(!logoSpinActive) return;
+        if(!logoSpinLastTime) logoSpinLastTime=now;
+        const elapsed=Math.min(100,now-logoSpinLastTime);
+        logoSpinLastTime=now;
+        logoRotation+=elapsed*18/1000;
+        applyLogoRotation(logoId,logoRotation);
+        if(which==='receiver' && socket && socket.readyState===1 && now-logoBroadcastTime>50){
+          socket.send(JSON.stringify({type:'rotation',rotation:logoRotation}));
+          logoBroadcastTime=now;
+        }
+        logoSpinFrame=requestAnimationFrame(tick);
+      };
+      logoSpinFrame=requestAnimationFrame(tick);
     }
     function applyLogoRotation(id, rotation){
       const element=$(id);
@@ -253,7 +274,9 @@
       if(!element || element.dataset.rotationReady) return;
       element.dataset.rotationReady='true';
       applyLogoRotation(id,logoRotation);
+      element.addEventListener('dragstart',event=>event.preventDefault());
       element.addEventListener('pointerdown',event=>{
+        event.preventDefault();
         const rect=element.getBoundingClientRect();
         element.setPointerCapture(event.pointerId);
         element.dataset.lastAngle=Math.atan2(event.clientY-(rect.top+rect.height/2),event.clientX-(rect.left+rect.width/2))*180/Math.PI;
@@ -261,10 +284,11 @@
       });
       element.addEventListener('pointermove',event=>{
         if(element.dataset.dragging!=='true') return;
+        event.preventDefault();
         const rect=element.getBoundingClientRect();
         const currentAngle=Math.atan2(event.clientY-(rect.top+rect.height/2),event.clientX-(rect.left+rect.width/2))*180/Math.PI;
         const rotation=Number(element.dataset.rotation)||0;
-        const nextRotation=rotation+angleDelta(currentAngle,Number(element.dataset.lastAngle)||currentAngle);
+        const nextRotation=rotation+angleDelta(currentAngle,Number(element.dataset.lastAngle)||currentAngle)*0.65;
         element.dataset.lastAngle=currentAngle;
         if(id==='senderLogoVisualizer' || id==='receiverLogoVisualizer') logoRotation=nextRotation;
         applyLogoRotation(id,nextRotation);
@@ -326,6 +350,10 @@
       if(socket) socket.close();
       if(scheduledStart) clearTimeout(scheduledStart);
       if(levelTimer) clearInterval(levelTimer);
+      logoSpinActive=false;
+      if(logoSpinFrame) cancelAnimationFrame(logoSpinFrame);
+      logoSpinFrame=null;
+      logoSpinLastTime=0;
       activeSources.forEach(source=>{ try { source.stop(); } catch {} });
       activePitchNodes.forEach(node=>{ try { node.disconnect(); } catch {} });
       activeSources=[]; activePitchNodes=[]; pendingTransport=null; clockReady=false; visualizers.clear();
