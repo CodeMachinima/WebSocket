@@ -130,6 +130,22 @@
     .logo-color-control input { width:34px; height:34px; padding:0; border:1px solid var(--line); border-radius:50%; background:transparent; cursor:pointer; }
     .logo-color-control input::-webkit-color-swatch-wrapper { padding:0; }
     .logo-color-control input::-webkit-color-swatch { border:0; border-radius:50%; }
+    .ttt-shell { position:fixed; z-index:20; top:50%; right:0; transform:translateY(-50%); color:var(--ink); }
+    .ttt-tab { writing-mode:vertical-rl; transform:rotate(180deg); padding:14px 8px; border:1px solid var(--line); border-right:0; background:#000; color:var(--ink); font:10px monospace; letter-spacing:.12em; }
+    .ttt-panel { display:none; position:absolute; right:0; top:0; width:260px; padding:16px; border:1px solid var(--line); background:#000; box-shadow:-8px 8px 0 #1a1a1a; }
+    .ttt-shell.open .ttt-panel { display:block; }
+    .ttt-panel h3 { margin:0 0 12px; font-size:12px; letter-spacing:.14em; text-transform:uppercase; }
+    .ttt-panel small, .ttt-status { color:var(--muted); font:10px monospace; line-height:1.45; }
+    .ttt-players { display:grid; gap:6px; margin-top:14px; }
+    .ttt-player, .ttt-action-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .ttt-player span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; }
+    .ttt-player button, .ttt-action-row button { margin:0; padding:7px 9px; font:10px monospace; }
+    .ttt-invite { margin:12px 0; padding:10px; border:1px solid var(--line); }
+    .ttt-invite[hidden], .ttt-game[hidden] { display:none; }
+    .ttt-board { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin-top:12px; }
+    .ttt-cell { aspect-ratio:1; margin:0; padding:0; border:1px solid var(--line); background:#050505; color:var(--ink); font-size:24px; }
+    .ttt-cell:disabled { opacity:.7; cursor:default; }
+    .control-locked input { opacity:.35; }
     .live-footer { display:flex; justify-content:center; align-items:center; margin:16px 0 24px; padding:0; border:0; }
     .live-footer span { display:none; }
     .live-footer button { margin:0; padding:8px 12px; border:0; color:var(--muted); font:10px monospace; text-transform:uppercase; }
@@ -183,9 +199,11 @@
       <div class="grid setup-grid"><div class="panel dark"><div class="panel-title"><span>Incoming stem</span><span>Follower</span></div><div class="track"><div class="track-icon">↗</div><div class="track-copy"><strong id="receiverStemTitle">Stem</strong><small id="receiverStemMeta">Loaded automatically</small></div></div><audio id="receiverAudio"></audio><div class="meter" id="receiverMeter"></div><p class="hint" id="receiverHint">Connect with the same code as the sender. Your stem begins when the sender presses play.</p><button class="back" onclick="goHome()">← Change role</button></div><div class="panel"><div class="panel-title"><span>Signal</span><span id="receiverState">Waiting for sender</span></div><h3 style="font-size:42px;letter-spacing:-.07em;margin:40px 0 10px;text-transform:uppercase;">Stay<br>in time.</h3><p class="hint">Keep this tab open and use headphones if the stems are playing in different rooms.</p></div></div>
       <div class="live-stage" id="receiverLive"><div class="live-layout"><div class="logo-visualizer receiver-logo interactive-logo" id="receiverLogoVisualizer"><canvas id="receiverVisualizerCanvas" aria-hidden="true"></canvas><img class="logo-image" draggable="false" src="assets/d7k201x-153b70f8-9c63-4d6a-afde-4095269b420e.png" alt="Sempiternal logo" /></div></div><div class="live-controls"><div class="live-pitch"><div class="pitch-control"><div class="pitch-label"><label for="receiverPitch">Pitch</label><output id="receiverPitchValue">0 semitones</output></div><input id="receiverPitch" type="range" min="-12" max="12" step="1" value="0" oninput="setPitch(this.value)" /></div></div><div class="live-volume"><div class="pitch-control"><div class="pitch-label"><label id="receiverVolumeLabel" for="receiverVolume">Instrument</label><output id="receiverVolumeValue">100%</output></div><input id="receiverVolume" type="range" min="0" max="100" step="1" value="100" oninput="setVolume(this.value)" /></div></div><label class="logo-color-control" for="receiverColor">Color<input id="receiverColor" type="color" value="#ffffff" oninput="setLogoColor(this.value)" /></label></div><div class="live-footer"><button onclick="goHome()">← Back</button></div></div>
     </section>
+    <aside class="ttt-shell" id="tttShell"><button class="ttt-tab" onclick="toggleTttPanel()">TIC TAC TOE</button><div class="ttt-panel"><h3>Tic tac toe</h3><div class="ttt-status" id="tttStatus">Connect to a session to challenge someone.</div><div class="ttt-invite" id="tttInvite" hidden><small id="tttInviteText"></small><div class="ttt-action-row"><button onclick="answerTttInvite(true)">Accept</button><button onclick="answerTttInvite(false)">Decline</button></div></div><div class="ttt-players" id="tttPlayers"></div><div class="ttt-game" id="tttGame" hidden><small id="tttGameText"></small><div class="ttt-board" id="tttBoard"></div></div></div></aside>
   </div>
   <script>
-    let role = null, receiverStem = null, socket = null, audioContext = null, audioBuffers = {}, activeSources = [], activePitchNodes = [], activeGains = [], pendingTransport = null, pitchSemitones = 0, volumeLevel = 1, clockOffset = 0, clockReady = false, scheduledStart = null, levelTimer = null, pitchWorkletPromise = null, pitchWorkletReady = false, logoRotation = 0, logoColor = '#ffffff', logoSpinFrame = null, logoSpinActive = false, logoSpinLastTime = 0, logoBroadcastTime = 0;
+    let role = null, receiverStem = null, socket = null, audioContext = null, audioBuffers = {}, activeSources = [], activePitchNodes = [], activeGains = [], pendingTransport = null, pitchSemitones = 0, volumeLevel = 1, clockOffset = 0, clockReady = false, scheduledStart = null, levelTimer = null, pitchWorkletPromise = null, pitchWorkletReady = false, logoRotation = 0, logoColor = '#ffffff', logoSpinFrame = null, logoSpinActive = false, logoSpinLastTime = 0, logoBroadcastTime = 0, myClientId = null, pendingTttInvite = null, outgoingTttInvite = null, controlWinnerId = null, controlLockUntil = 0;
+    let ttt = { active:false, gameId:null, opponentId:null, opponentName:'', myMark:null, turn:'X', board:Array(9).fill(null) };
     const audioFiles = {
       mainVocal:'audio/shadow-moses-main-vocals.mp3',
       guitar:'audio/stems/htdemucs_6s/shadow-moses-instrumental/guitar.mp3',
@@ -199,6 +217,100 @@
     const stemLabels = { guitar:'Guitar', bass:'Bass', drums:'Drums', piano:'Keyboard / Effects', backingVocal:'Backing vocals' };
     const visualizers = new Map();
     bars('senderMeter'); bars('receiverMeter');
+    function displayName(){ return role==='sender' ? 'Main vocals' : (stemLabels[receiverStem] || 'Receiver'); }
+    function toggleTttPanel(){ $('tttShell').classList.toggle('open'); }
+    function updateLobbyParticipants(participants){
+      const list=$('tttPlayers');
+      if(!list) return;
+      list.innerHTML='';
+      const others=participants.filter(participant=>participant.id!==myClientId);
+      if(!others.length){ list.innerHTML='<small>No other connected pages yet.</small>'; return; }
+      others.forEach(participant=>{
+        const row=document.createElement('div'); row.className='ttt-player';
+        const name=document.createElement('span'); name.textContent=participant.role==='sender'?'Main vocals':(stemLabels[participant.stem]||participant.stem);
+        const button=document.createElement('button'); button.textContent='Challenge'; button.onclick=()=>inviteTtt(participant.id,name.textContent);
+        row.append(name,button); list.appendChild(row);
+      });
+    }
+    function inviteTtt(targetId,targetName){
+      if(!socket || socket.readyState!==1 || ttt.active) return;
+      outgoingTttInvite={targetId,targetName};
+      $('tttStatus').textContent='Challenge sent. Waiting for a response…';
+      socket.send(JSON.stringify({type:'ttt-invite',targetId,fromName:displayName()}));
+    }
+    function answerTttInvite(accepted){
+      if(!pendingTttInvite || !socket || socket.readyState!==1) return;
+      socket.send(JSON.stringify({type:'ttt-response',toId:pendingTttInvite.fromId,fromName:displayName(),accepted}));
+      if(accepted) $('tttStatus').textContent='Accepted. Starting game…';
+      else $('tttStatus').textContent='Challenge declined.';
+      pendingTttInvite=null;
+      $('tttInvite').hidden=true;
+    }
+    function startTttGame(opponentId,opponentName,myMark,gameId){
+      ttt={active:true,gameId:gameId||Math.random().toString(36).slice(2),opponentId,opponentName,myMark,turn:'X',board:Array(9).fill(null)};
+      $('tttGame').hidden=false;
+      $('tttStatus').textContent='Game active.';
+      renderTtt();
+      $('tttShell').classList.add('open');
+    }
+    function tttWinner(board){
+      const lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+      for(const [a,b,c] of lines) if(board[a] && board[a]===board[b] && board[a]===board[c]) return board[a];
+      return board.every(Boolean) ? 'tie' : null;
+    }
+    function renderTtt(){
+      const text=$('tttGameText'), board=$('tttBoard');
+      if(!text || !board) return;
+      text.textContent=ttt.active ? (ttt.turn===ttt.myMark ? `Your turn (${ttt.myMark})` : `Waiting for ${ttt.opponentName}`) : text.textContent;
+      board.innerHTML='';
+      ttt.board.forEach((mark,index)=>{
+        const cell=document.createElement('button'); cell.className='ttt-cell'; cell.textContent=mark||'';
+        cell.disabled=!ttt.active || ttt.turn!==ttt.myMark || Boolean(mark);
+        cell.onclick=()=>playTttCell(index);
+        board.appendChild(cell);
+      });
+    }
+    function playTttCell(index){
+      if(!ttt.active || ttt.turn!==ttt.myMark || ttt.board[index]) return;
+      ttt.board[index]=ttt.myMark;
+      const result=tttWinner(ttt.board);
+      if(socket && socket.readyState===1) socket.send(JSON.stringify({type:'ttt-move',toId:ttt.opponentId,gameId:ttt.gameId,index,mark:ttt.myMark}));
+      if(result) finishTtt(result==='tie'?null:myClientId);
+      else { ttt.turn=ttt.myMark==='X'?'O':'X'; renderTtt(); }
+    }
+    function receiveTttMove(message){
+      if(!ttt.active || message.gameId!==ttt.gameId || ttt.turn===ttt.myMark || ttt.board[message.index]) return;
+      ttt.board[message.index]=message.mark;
+      const result=tttWinner(ttt.board);
+      if(result) finishTtt(result==='tie'?null:ttt.opponentId);
+      else { ttt.turn=ttt.myMark; renderTtt(); }
+    }
+    function finishTtt(winnerId){
+      ttt.active=false;
+      if(!winnerId){ $('tttStatus').textContent='Tie game — no control changes.'; $('tttGameText').textContent='Tie game'; renderTtt(); return; }
+      const expiresAtServer=localServerTime()+10000;
+      grantControl(winnerId,expiresAtServer);
+      $('tttStatus').textContent=(winnerId===myClientId?'You win!':'Opponent wins!')+' Control lasts 10 seconds.';
+      $('tttGameText').textContent=winnerId===myClientId?'You win':'Opponent wins';
+      renderTtt();
+      if(socket && socket.readyState===1) socket.send(JSON.stringify({type:'ttt-result',toId:ttt.opponentId,winnerId}));
+    }
+    function grantControl(winnerId,expiresAtServer){
+      controlWinnerId=winnerId;
+      controlLockUntil=expiresAtServer-clockOffset;
+      refreshControlLock();
+      setTimeout(refreshControlLock,Math.max(0,controlLockUntil-Date.now())+20);
+    }
+    function canControl(){
+      refreshControlLock();
+      return !(controlLockUntil>Date.now() && controlWinnerId!==myClientId);
+    }
+    function refreshControlLock(){
+      const locked=controlLockUntil>Date.now() && controlWinnerId!==myClientId;
+      const app=$(role==='sender'?'senderApp':'receiverApp');
+      if(app) app.classList.toggle('control-locked',locked);
+      ['senderPitch','senderVolume','senderColor','receiverPitch','receiverVolume','receiverColor'].forEach(id=>{ if($(id)) $(id).disabled=locked; });
+    }
     function registerVisualizer(id, canvasId){
       const canvas=$(canvasId);
       if(!canvas || visualizers.has(id)) return;
@@ -283,6 +395,8 @@
       if(element) element.style.setProperty('--logo-color',color);
     }
     function setLogoColor(value){
+      const input=$(role==='sender'?'senderColor':'receiverColor');
+      if(!canControl()) { if(input) input.value=logoColor; return; }
       logoColor=/^#[0-9a-f]{6}$/i.test(value) ? value.toLowerCase() : '#ffffff';
       const id=role==='sender'?'senderLogoVisualizer':'receiverLogoVisualizer';
       applyLogoColor(id,logoColor);
@@ -308,6 +422,7 @@
       element.addEventListener('dragstart',event=>event.preventDefault());
       element.addEventListener('click',event=>{
         event.preventDefault();
+        if(!canControl()) return;
         if(element.dataset.didDrag==='true'){
           element.dataset.didDrag='false';
           return;
@@ -316,6 +431,7 @@
         if(broadcast && socket && socket.readyState===1) socket.send(JSON.stringify({type:'logo-click'}));
       });
       element.addEventListener('pointerdown',event=>{
+        if(!canControl()) return;
         event.preventDefault();
         const rect=element.getBoundingClientRect();
         element.setPointerCapture(event.pointerId);
@@ -402,6 +518,8 @@
       activePitchNodes.forEach(node=>{ try { node.disconnect(); } catch {} });
       activeGains.forEach(gain=>{ try { gain.disconnect(); } catch {} });
       activeSources=[]; activePitchNodes=[]; activeGains=[]; pendingTransport=null; clockReady=false; visualizers.clear();
+      ttt={active:false,gameId:null,opponentId:null,opponentName:'',myMark:null,turn:'X',board:Array(9).fill(null)};
+      pendingTttInvite=null; outgoingTttInvite=null; controlWinnerId=null; controlLockUntil=0; myClientId=null;
       logoRotation=0;
       logoColor='#ffffff';
       volumeLevel=1;
@@ -415,6 +533,9 @@
       if($('receiverVolume')) $('receiverVolume').value=100;
       if($('senderVolumeValue')) $('senderVolumeValue').textContent='100%';
       if($('receiverVolumeValue')) $('receiverVolumeValue').textContent='100%';
+      if($('tttInvite')) $('tttInvite').hidden=true;
+      if($('tttGame')) $('tttGame').hidden=true;
+      if($('tttStatus')) $('tttStatus').textContent='Connect to a session to challenge someone.';
       if($('participantRail')) $('participantRail').innerHTML='';
       document.querySelectorAll('.app').forEach(x=>x.classList.remove('active','live-mode'));
       document.body.classList.remove('live-mode');
@@ -423,6 +544,8 @@
     function code(){ return $(role==='sender'?'senderCode':'receiverCode').value.trim().toUpperCase() || 'MOSES1'; }
     function localServerTime(){ return Date.now() + clockOffset; }
     function setPitch(value){
+      const input=$(role==='sender'?'senderPitch':'receiverPitch');
+      if(!canControl()) { if(input) input.value=pitchSemitones; return; }
       pitchSemitones=Number(value);
       const output=$(role==='sender'?'senderPitchValue':'receiverPitchValue');
       output.textContent=(pitchSemitones>0?'+':'')+pitchSemitones+' semitone'+(Math.abs(pitchSemitones)===1?'':'s');
@@ -430,6 +553,8 @@
       activePitchNodes.forEach(node=>node.port.postMessage({ratio}));
     }
     function setVolume(value){
+      const input=$(role==='sender'?'senderVolume':'receiverVolume');
+      if(!canControl()) { if(input) input.value=Math.round(volumeLevel*100); return; }
       volumeLevel=Math.max(0,Math.min(1,Number(value)/100));
       const output=$(role==='sender'?'senderVolumeValue':'receiverVolumeValue');
       if(output) output.textContent=Math.round(volumeLevel*100)+'%';
@@ -507,11 +632,41 @@
       socket.onmessage=e=>{
         let msg;
         try { msg=JSON.parse(e.data); } catch { return; }
-        if(msg.type==='participants'){ updateParticipants(msg.participants||[]); return; }
+        if(msg.type==='identity'){ myClientId=msg.clientId; return; }
+        if(msg.type==='participants'){ updateParticipants(msg.participants||[]); updateLobbyParticipants(msg.participants||[]); return; }
         if(msg.type==='level' && role==='sender'){ setVisualizerLevel('participant-'+msg.clientId,msg.value,msg.frequencies); return; }
         if(msg.type==='rotation' && role==='sender'){ applyLogoRotation('participant-'+msg.clientId,Number(msg.rotation)||0); return; }
         if(msg.type==='logo-click' && role==='sender'){ triggerLogoPop('participant-'+msg.clientId); return; }
         if(msg.type==='logo-color' && role==='sender'){ applyLogoColor('participant-'+msg.clientId,msg.color||'#ffffff'); return; }
+        if(msg.type==='ttt-invite'){
+          pendingTttInvite=msg;
+          $('tttInviteText').textContent=msg.fromName+' challenged you to tic tac toe.';
+          $('tttInvite').hidden=false;
+          $('tttShell').classList.add('open');
+          return;
+        }
+        if(msg.type==='ttt-response'){
+          if(!outgoingTttInvite || msg.fromId!==outgoingTttInvite.targetId) return;
+          if(!msg.accepted){ $('tttStatus').textContent=msg.fromName+' declined the challenge.'; outgoingTttInvite=null; return; }
+          const gameId=Math.random().toString(36).slice(2);
+          startTttGame(msg.fromId,msg.fromName,'X',gameId);
+          socket.send(JSON.stringify({type:'ttt-start',toId:msg.fromId,gameId,opponentId:myClientId,opponentName:displayName(),myMark:'O'}));
+          outgoingTttInvite=null;
+          return;
+        }
+        if(msg.type==='ttt-start'){
+          startTttGame(msg.opponentId,msg.opponentName,msg.myMark,msg.gameId);
+          return;
+        }
+        if(msg.type==='ttt-move'){ receiveTttMove(msg); return; }
+        if(msg.type==='ttt-result'){
+          ttt.active=false;
+          grantControl(msg.winnerId,msg.expiresAtServer);
+          $('tttStatus').textContent=(msg.winnerId===myClientId?'You win!':'Opponent wins!')+' Control lasts 10 seconds.';
+          $('tttGameText').textContent=msg.winnerId===myClientId?'You win':'Opponent wins';
+          renderTtt();
+          return;
+        }
         if(role==='receiver' && msg.type==='transport' && msg.action==='play'){
           showLive('receiver');
           if(audioBuffers[receiverStem]) scheduleAudio([receiverStem], msg.time, msg.startAt);
