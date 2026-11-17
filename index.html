@@ -353,7 +353,15 @@
       const delay = Math.max(0, localStart - Date.now());
       scheduledStart = setTimeout(()=>{
         const remaining = (localStart - Date.now()) / 1000;
-        const startTime = audioContext.currentTime + Math.max(0.01, remaining);
+        // The Web Audio clock is shared through the server, but each device's
+        // output hardware has its own delay. Start the buffer early enough that
+        // the audible signal reaches the speakers at the shared start time.
+        // `outputLatency` is the best browser estimate; `baseLatency` is the
+        // fallback on browsers that do not expose it.
+        const outputLatency = typeof audioContext.outputLatency === 'number'
+          ? audioContext.outputLatency
+          : (audioContext.baseLatency || 0);
+        const startTime = audioContext.currentTime + Math.max(0.01, remaining - outputLatency);
         const lateOffset = time + Math.max(0, -remaining);
         activeSources.forEach(source=>{ try { source.stop(); } catch {} });
         activeSources = trackNames.map(name=>{
