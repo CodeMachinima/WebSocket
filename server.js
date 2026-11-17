@@ -42,7 +42,6 @@ wss.on('connection', (client, req) => {
   client.rotation = 0;
   client.logoColor = '#ffffff';
   roomState.clients.add(client);
-  client.send(JSON.stringify({ type: 'identity', clientId: client.id }));
   if (role === 'sender') roomState.sender = client;
   else if (singleReceiverStems.has(stem)) roomState.receivers.set(stem, client);
   broadcastParticipants(roomState);
@@ -106,33 +105,6 @@ wss.on('connection', (client, req) => {
       return;
     }
 
-    if (payload.type === 'ttt-invite') {
-      const target = [...roomState.clients].find(peer => peer.id === payload.targetId);
-      if (!target || target === client || target.readyState !== WebSocket.OPEN) return;
-      target.send(JSON.stringify({ type: 'ttt-invite', fromId: client.id, fromName: payload.fromName || 'Player' }));
-      return;
-    }
-
-    if (payload.type === 'ttt-response') {
-      const target = [...roomState.clients].find(peer => peer.id === payload.toId);
-      if (!target || target.readyState !== WebSocket.OPEN) return;
-      target.send(JSON.stringify({ type: 'ttt-response', fromId: client.id, fromName: payload.fromName || 'Player', accepted: Boolean(payload.accepted) }));
-      return;
-    }
-
-    if (payload.type === 'ttt-start' || payload.type === 'ttt-move') {
-      const target = [...roomState.clients].find(peer => peer.id === payload.toId);
-      if (!target || target.readyState !== WebSocket.OPEN) return;
-      target.send(JSON.stringify({ ...payload, fromId: client.id }));
-      return;
-    }
-
-    if (payload.type === 'ttt-result') {
-      const target = [...roomState.clients].find(peer => peer.id === payload.toId);
-      if (!target || target.readyState !== WebSocket.OPEN) return;
-      target.send(JSON.stringify({ type: 'ttt-result', winnerId: payload.winnerId, expiresAtServer: Date.now() + 10000 }));
-      return;
-    }
 
     if (payload.type === 'transport' && client.role !== 'sender') return;
 
