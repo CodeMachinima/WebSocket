@@ -107,7 +107,7 @@
     .logo-visualizer canvas { position:absolute; inset:-15%; width:130%; height:130%; pointer-events:none; }
     .logo-visualizer img { position:absolute; inset:15%; width:70%; height:70%; object-fit:contain; filter:invert(1); mix-blend-mode:screen; }
     .logo-visualizer .logo-image { transform:rotate(var(--logo-rotation,0deg)); transform-origin:center; user-select:none; -webkit-user-drag:none; }
-    .logo-visualizer .logo-image { filter:brightness(0) saturate(100%) drop-shadow(0 0 0 var(--logo-color,#ffffff)); }
+    .logo-visualizer .logo-image { filter:brightness(0) saturate(100%) drop-shadow(0 0 0 var(--logo-color,#ffffff)) drop-shadow(0 0 2px var(--logo-color,#ffffff)); }
     .logo-pop .logo-image { animation:logo-pop .22s cubic-bezier(.2,.9,.3,1); }
     .interactive-logo { cursor:grab; touch-action:none; }
     .interactive-logo:active { cursor:grabbing; }
